@@ -1,0 +1,7 @@
+/* css/themes/sport-voleibol.css */
+.sport-voleibol {
+    --color-accent: #8b5cf6;
+    --color-accent-hover: #7c3aed;
+    --color-accent-glow: rgba(139, 92, 246, 0.35);
+    --color-accent-rgb: 139, 92, 246;
+}

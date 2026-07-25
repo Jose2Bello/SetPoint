@@ -1,0 +1,7 @@
+/* css/themes/sport-futbol.css */
+.sport-futbol {
+    --color-accent: #10b981;
+    --color-accent-hover: #059669;
+    --color-accent-glow: rgba(16, 185, 129, 0.35);
+    --color-accent-rgb: 16, 185, 129;
+}

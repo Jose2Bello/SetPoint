@@ -1,0 +1,7 @@
+/* css/themes/sport-basquet.css */
+.sport-basquet {
+    --color-accent: #f97316;
+    --color-accent-hover: #ea580c;
+    --color-accent-glow: rgba(249, 115, 22, 0.35);
+    --color-accent-rgb: 249, 115, 22;
+}

@@ -1,0 +1,24 @@
+/* css/main.css */
+@import url('variables.css');
+@import url('reset.css');
+@import url('layout.css');
+@import url('utilities.css');
+@import url('animations.css');
+@import url('components/forms.css');
+
+/* Themes (active via class on parent) */
+@import url('themes/sport-futbol.css');
+@import url('themes/sport-basquet.css');
+@import url('themes/sport-voleibol.css');
+
+/* Global UI classes and scroll behaviors */
+html {
+    scroll-behavior: smooth;
+}
+body {
+    background: var(--color-bg-base);
+    background-image: 
+        radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.05) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.05) 0px, transparent 50%);
+    background-attachment: fixed;
+}
