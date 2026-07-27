@@ -1,9 +1,7 @@
-/* js/router.js */
+import { renderDashboard } from './views/dashboard.view.js';
 
-// Mapping hash routes to their view rendering functions
-// In Fase 2, these will be mapped to placeholder or actual view modules.
 const routes = {
-    'dashboard': null,
+    'dashboard': renderDashboard, // Registrar directamente la vista del dashboard
     'leagues': null,
     'teams': null,
     'team': null,     // expects parameter :id

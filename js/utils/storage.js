@@ -43,7 +43,7 @@ export const storage = {
 
     /**
      * Gets the active league ID.
-     * @returns {number|null}
+     * @returns {number|string|null}
      */
     getActiveLeagueId() {
         return this.get('active_league_id', null);
@@ -51,10 +51,14 @@ export const storage = {
 
     /**
      * Sets the active league ID.
-     * @param {number} id 
+     * @param {number|string} id 
      */
     setActiveLeagueId(id) {
-        this.set('active_league_id', id);
+        if (id) {
+            this.set('active_league_id', id);
+        } else {
+            this.remove('active_league_id');
+        }
     },
 
     /**
@@ -73,3 +77,7 @@ export const storage = {
         this.set('theme', theme);
     }
 };
+
+// --- Helpers de exportación nombrada para compatibilidad ---
+export const getActiveLeagueFromStorage = () => storage.getActiveLeagueId();
+export const setActiveLeagueInStorage = (id) => storage.setActiveLeagueId(id);
