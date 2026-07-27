@@ -1,8 +1,9 @@
 import { renderDashboard } from './views/dashboard.view.js';
+import { renderLeagues } from './views/leagues.view.js';
 
 const routes = {
-    'dashboard': renderDashboard, // Registrar directamente la vista del dashboard
-    'leagues': null,
+    'dashboard': renderDashboard, 
+    'leagues': renderLeagues,
     'teams': null,
     'team': null,     // expects parameter :id
     'players': null,
