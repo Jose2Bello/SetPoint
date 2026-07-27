@@ -51,11 +51,10 @@ export const teamsDb = {
             const data = {
                 leagueId: Number(team.leagueId),
                 name: team.name.trim(),
-                shield: (team.shield || '').trim(), // URL
+                logo: team.logo || '', // <-- Cambiado de shield a logo
                 primaryColor: team.primaryColor || '#3b82f6',
                 secondaryColor: team.secondaryColor || '#1e3a8a',
                 city: (team.city || '').trim(),
-                // Initial aggregate statistics
                 stats: {
                     played: 0,
                     won: 0,
@@ -75,12 +74,6 @@ export const teamsDb = {
         });
     },
 
-    /**
-     * Updates an existing team's visual/textual metadata.
-     * @param {number} id 
-     * @param {object} teamUpdate 
-     * @returns {Promise<void>}
-     */
     update(id, teamUpdate) {
         return new Promise((resolve, reject) => {
             const db = getDB();
@@ -96,7 +89,7 @@ export const teamsDb = {
                 }
                 
                 data.name = teamUpdate.name.trim();
-                data.shield = (teamUpdate.shield || '').trim();
+                data.logo = teamUpdate.logo || ''; // <-- Cambiado de shield a logo
                 data.primaryColor = teamUpdate.primaryColor;
                 data.secondaryColor = teamUpdate.secondaryColor;
                 data.city = (teamUpdate.city || '').trim();
