@@ -1,11 +1,12 @@
 import { renderDashboard } from './views/dashboard.view.js';
 import { renderLeagues } from './views/leagues.view.js';
+import { renderTeams } from './views/teams.view.js'; 
 
 const routes = {
     'dashboard': renderDashboard, 
     'leagues': renderLeagues,
-    'teams': null,
-    'team': null,     // expects parameter :id
+    'teams': renderTeams, 
+    'team': null,     
     'players': null,
     'player': null,   // expects parameter :id
     'matches': null,
