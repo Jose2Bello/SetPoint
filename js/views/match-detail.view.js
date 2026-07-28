@@ -1,4 +1,3 @@
-// js/views/match-detail.view.js
 import { getMatchById } from '../db/matches.db.js';
 import { getTeamById } from '../db/teams.db.js';
 import { getPlayersByTeam } from '../db/players.db.js';
@@ -36,6 +35,10 @@ export async function renderMatchDetail(container, params) {
     const awayPlayers = match.awayTeamId ? await getPlayersByTeam(match.awayTeamId) : [];
     const events = await getEventsByMatch(matchId);
 
+    const isFinished = match.status === 'finished' || match.status === 'Finalizado';
+    const homeScore = match.homeScore ?? match.score?.home ?? 0;
+    const awayScore = match.awayScore ?? match.score?.away ?? 0;
+
     container.textContent = '';
 
     // Navegación
@@ -66,8 +69,8 @@ export async function renderMatchDetail(container, params) {
 
     const bigScoreSpan = document.createElement('span');
     bigScoreSpan.className = 'big-score';
-    if (match.status === 'finished') {
-        bigScoreSpan.textContent = `${match.homeScore} - ${match.awayScore}`;
+    if (isFinished) {
+        bigScoreSpan.textContent = `${homeScore} - ${awayScore}`;
     } else {
         bigScoreSpan.className += ' vs-text';
         bigScoreSpan.textContent = 'VS';
@@ -76,7 +79,7 @@ export async function renderMatchDetail(container, params) {
 
     const statusBadge = document.createElement('span');
     statusBadge.className = `badge status-${match.status}`;
-    statusBadge.textContent = match.status === 'finished' ? 'Finalizado' : 'Programado';
+    statusBadge.textContent = isFinished ? 'Finalizado' : 'Programado';
     scoreDiv.appendChild(statusBadge);
 
     const awayDiv = document.createElement('div');
@@ -92,7 +95,7 @@ export async function renderMatchDetail(container, params) {
     container.appendChild(header);
 
     // Panel de control si está programado
-    if (match.status === 'scheduled' && homeTeam && awayTeam) {
+    if (!isFinished && homeTeam && awayTeam) {
         const controlPanel = document.createElement('div');
         controlPanel.className = 'glass-panel control-panel';
 
@@ -104,7 +107,6 @@ export async function renderMatchDetail(container, params) {
         form.id = 'event-form';
         form.className = 'event-form-grid';
 
-        // Equipo Select Group
         const groupTeam = document.createElement('div');
         groupTeam.className = 'form-group';
         const labelTeam = document.createElement('label');
@@ -128,7 +130,6 @@ export async function renderMatchDetail(container, params) {
         groupTeam.appendChild(teamSelect);
         form.appendChild(groupTeam);
 
-        // Jugador Select Group
         const groupPlayer = document.createElement('div');
         groupPlayer.className = 'form-group';
         const labelPlayer = document.createElement('label');
@@ -142,7 +143,6 @@ export async function renderMatchDetail(container, params) {
         groupPlayer.appendChild(playerSelect);
         form.appendChild(groupPlayer);
 
-        // Minuto Group
         const groupMin = document.createElement('div');
         groupMin.className = 'form-group';
         const labelMin = document.createElement('label');
@@ -158,7 +158,6 @@ export async function renderMatchDetail(container, params) {
         groupMin.appendChild(inputMin);
         form.appendChild(groupMin);
 
-        // Submit Button
         const btnSubmitEv = document.createElement('button');
         btnSubmitEv.type = 'submit';
         btnSubmitEv.className = 'btn btn-primary align-self-end';
@@ -167,7 +166,6 @@ export async function renderMatchDetail(container, params) {
 
         controlPanel.appendChild(form);
 
-        // Acciones bar
         const actionsBar = document.createElement('div');
         actionsBar.className = 'match-actions-bar';
         const btnFinalize = document.createElement('button');
@@ -179,7 +177,6 @@ export async function renderMatchDetail(container, params) {
 
         container.appendChild(controlPanel);
 
-        // Actualizar opciones de jugadores dinámicamente
         const updatePlayersOptions = (isHome) => {
             playerSelect.textContent = '';
             const list = isHome ? homePlayers : awayPlayers;
@@ -196,7 +193,6 @@ export async function renderMatchDetail(container, params) {
             updatePlayersOptions(e.target.value === 'home');
         });
 
-        // Registrar Evento Submit
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(e.target);
@@ -218,15 +214,16 @@ export async function renderMatchDetail(container, params) {
             }
         });
 
-        // Finalizar Partido transaccional
         btnFinalize.addEventListener('click', async () => {
             const currentEvents = await getEventsByMatch(matchId);
-            const homeScore = currentEvents.filter(ev => ev.teamId === homeTeam.id).length;
-            const awayScore = currentEvents.filter(ev => ev.teamId === awayTeam.id).length;
+            const calcHomeScore = currentEvents.filter(ev => ev.teamId === homeTeam.id).length;
+            const calcAwayScore = currentEvents.filter(ev => ev.teamId === awayTeam.id).length;
 
             let winnerId = null;
-            if (activeLeague.modality === 'knockout' && homeScore === awayScore) {
-                const pickWinner = prompt(`El partido terminó en empate (${homeScore}-${awayScore}). Al ser eliminación directa, declare el ganador escribiendo el nombre del equipo clasificado (${homeTeam.name} o ${awayTeam.name}):`);
+            const isKnockout = activeLeague.mode === 'eliminacion' || activeLeague.modality === 'knockout';
+
+            if (isKnockout && calcHomeScore === calcAwayScore) {
+                const pickWinner = prompt(`El partido terminó en empate (${calcHomeScore}-${calcAwayScore}). Al ser eliminación directa, declare el ganador escribiendo el nombre del equipo clasificado (${homeTeam.name} o ${awayTeam.name}):`);
                 if (pickWinner?.trim().toLowerCase() === homeTeam.name.toLowerCase()) {
                     winnerId = homeTeam.id;
                 } else if (pickWinner?.trim().toLowerCase() === awayTeam.name.toLowerCase()) {
@@ -238,7 +235,7 @@ export async function renderMatchDetail(container, params) {
             }
 
             try {
-                await finalizeMatch(matchId, homeScore, awayScore, currentEvents, winnerId);
+                await finalizeMatch(matchId, currentEvents, winnerId);
                 alert('¡Partido finalizado con éxito!');
                 window.location.reload();
             } catch (err) {
@@ -247,7 +244,7 @@ export async function renderMatchDetail(container, params) {
         });
     }
 
-    // Listado de eventos registrados
+    // Listado de eventos
     const eventsContainer = document.createElement('div');
     eventsContainer.className = 'glass-panel section-container';
     const h3Events = document.createElement('h3');
@@ -265,7 +262,7 @@ export async function renderMatchDetail(container, params) {
             const li = document.createElement('li');
             li.textContent = `Minuto ${ev.minute || 'S/N'}: Jugador ID ${ev.playerId} anotó ${sportConfig.scoreEvent}`;
 
-            if (match.status === 'scheduled') {
+            if (!isFinished) {
                 const btnDel = document.createElement('button');
                 btnDel.className = 'btn-sm btn-danger';
                 btnDel.textContent = 'X';
@@ -282,7 +279,7 @@ export async function renderMatchDetail(container, params) {
     container.appendChild(eventsContainer);
 
     // Botón Deshacer si está finalizado
-    if (match.status === 'finished') {
+    if (isFinished) {
         const undoContainer = document.createElement('div');
         undoContainer.className = 'glass-panel text-center';
         const btnUndo = document.createElement('button');

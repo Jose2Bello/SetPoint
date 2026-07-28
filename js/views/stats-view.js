@@ -1,4 +1,3 @@
-// js/views/stats.view.js
 import { getActiveLeague } from '../db/leagues.db.js';
 import { getTeamsByLeague } from '../db/teams.db.js';
 import { getAllPlayers } from '../db/players.db.js';
@@ -40,12 +39,15 @@ export async function renderStats(container) {
     const players = await getAllPlayers(activeLeague.id);
     const matches = await getAllMatches(activeLeague.id);
 
-    // Cálculos estadísticos generales
-    const finishedMatches = matches.filter(m => m.status === 'finished');
-    const totalGoals = finishedMatches.reduce((acc, m) => acc + (m.homeScore || 0) + (m.awayScore || 0), 0);
+    // Filtrar partidos finalizados soportando ambas convenciones de nombre
+    const finishedMatches = matches.filter(m => m.status === 'finished' || m.status === 'Finalizado');
+    const totalGoals = finishedMatches.reduce((acc, m) => {
+        const homeScore = m.homeScore ?? m.score?.home ?? 0;
+        const awayScore = m.awayScore ?? m.score?.away ?? 0;
+        return acc + homeScore + awayScore;
+    }, 0);
     const avgGoals = finishedMatches.length ? (totalGoals / finishedMatches.length).toFixed(2) : '0.00';
 
-    // Encontrar goleador / máximo anotador
     let topScorer = null;
     let maxGoals = -1;
     players.forEach(p => {
@@ -58,7 +60,6 @@ export async function renderStats(container) {
 
     container.textContent = '';
 
-    // Cabecera
     const headerDiv = document.createElement('div');
     headerDiv.className = 'view-header';
     const h1 = document.createElement('h1');
@@ -72,7 +73,6 @@ export async function renderStats(container) {
     headerDiv.appendChild(pSub);
     container.appendChild(headerDiv);
 
-    // Grid de Indicadores Clave (KPIs)
     const kpiGrid = document.createElement('div');
     kpiGrid.className = 'stats-overview-grid';
 
@@ -105,7 +105,6 @@ export async function renderStats(container) {
     
     container.appendChild(kpiGrid);
 
-    // Sección de Destacados Individuales
     const highlightsContainer = document.createElement('div');
     highlightsContainer.className = 'glass-panel section-container';
     
@@ -116,7 +115,6 @@ export async function renderStats(container) {
     const highlightsGrid = document.createElement('div');
     highlightsGrid.className = 'cards-grid';
 
-    // Tarjeta de Máximo Anotador
     const scorerCard = document.createElement('div');
     scorerCard.className = 'card glass-panel';
     const h3Scorer = document.createElement('h3');
