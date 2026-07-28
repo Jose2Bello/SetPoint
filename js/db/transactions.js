@@ -1,683 +1,658 @@
-/* js/db/transactions.js */
 import { getDB } from './connection.js';
 
-export const transactions = {
-    /**
-     * Activates a league and deactivates all others.
-     * @param {number} leagueId 
-     * @returns {Promise<void>}
-     */
-    activateLeague(leagueId) {
-        return new Promise((resolve, reject) => {
-            const db = getDB();
-            const tx = db.transaction('leagues', 'readwrite');
-            const store = tx.objectStore('leagues');
-            
-            const req = store.openCursor();
-            req.onsuccess = (event) => {
-                const cursor = event.target.result;
-                if (cursor) {
-                    const league = cursor.value;
-                    const shouldBeActive = league.id === Number(leagueId);
-                    
-                    if (league.isActive !== shouldBeActive) {
-                        league.isActive = shouldBeActive;
-                        cursor.update(league);
-                    }
-                    cursor.continue();
+/**
+ * Activa una liga y desactiva las demás.
+ * @param {number} leagueId 
+ * @returns {Promise<void>}
+ */
+export function activateLeague(leagueId) {
+    return new Promise((resolve, reject) => {
+        const db = getDB();
+        const tx = db.transaction('leagues', 'readwrite');
+        const store = tx.objectStore('leagues');
+        
+        const req = store.openCursor();
+        req.onsuccess = (event) => {
+            const cursor = event.target.result;
+            if (cursor) {
+                const league = cursor.value;
+                const shouldBeActive = league.id === Number(leagueId);
+                
+                if (league.isActive !== shouldBeActive) {
+                    league.isActive = shouldBeActive;
+                    cursor.update(league);
                 }
-            };
-            
-            tx.oncomplete = () => {
-               
-                window.dispatchEvent(new CustomEvent('league-activated'));
-                resolve();
-            };
-            tx.onerror = () => reject(tx.error);
-            tx.onabort = () => reject(new Error('Transaction aborted'));
-        });
-    },
-    /**
-     * Deletes a league and all its cascaded entities in a single transaction.
-     * @param {number} leagueId 
-     * @returns {Promise<void>}
-     */
-    deleteLeagueCascade(leagueId) {
-        return new Promise((resolve, reject) => {
-            const db = getDB();
-            const targetLeagueId = Number(leagueId);
-            const stores = ['leagues', 'teams', 'players', 'matches', 'events'];
-            const tx = db.transaction(stores, 'readwrite');
-            
-            // 1. Delete League
-            tx.objectStore('leagues').delete(targetLeagueId);
-            
-            // 2. Fetch and delete teams and their players
-            const teamsStore = tx.objectStore('teams');
-            const playersStore = tx.objectStore('players');
-            const teamsIndex = teamsStore.index('leagueId');
-            
-            const teamIdsToDelete = [];
-            
-            teamsIndex.openCursor(targetLeagueId).onsuccess = (e) => {
-                const cursor = e.target.result;
-                if (cursor) {
-                    const teamId = cursor.value.id;
-                    teamIdsToDelete.push(teamId);
-                    cursor.delete();
-                    cursor.continue();
-                } else {
-                    // For each deleted team, delete players
-                    for (const teamId of teamIdsToDelete) {
-                        playersStore.index('teamId').openCursor(teamId).onsuccess = (pe) => {
-                            const pCursor = pe.target.result;
-                            if (pCursor) {
-                                pCursor.delete();
-                                pCursor.continue();
-                            }
-                        };
-                    }
-                }
-            };
-            
-            // 3. Delete matches and match events
-            const matchesStore = tx.objectStore('matches');
-            const eventsStore = tx.objectStore('events');
-            
-            matchesStore.index('leagueId').openCursor(targetLeagueId).onsuccess = (me) => {
-                const cursor = me.target.result;
-                if (cursor) {
-                    const matchId = cursor.value.id;
-                    cursor.delete();
-                    
-                    eventsStore.index('matchId').openCursor(matchId).onsuccess = (ee) => {
-                        const eCursor = ee.target.result;
-                        if (eCursor) {
-                            eCursor.delete();
-                            eCursor.continue();
-                        }
-                    };
-                    cursor.continue();
-                }
-            };
-            
-            tx.oncomplete = () => resolve();
-            tx.onerror = () => reject(tx.error);
-            tx.onabort = () => reject(new Error('Transaction aborted'));
-        });
-    },
+                cursor.continue();
+            }
+        };
+        
+        tx.oncomplete = () => {
+            window.dispatchEvent(new CustomEvent('league-activated'));
+            resolve();
+        };
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(new Error('Transaction aborted'));
+    });
+}
 
-    /**
-     * Finalizes a match, recording events, updating stats, and advancing bracket winners.
-     * @param {number} matchId 
-     * @param {Array} eventsList 
-     * @param {number|null} manualWinnerId For tie breaking in brackets
-     * @returns {Promise<void>}
-     */
-    finalizeMatch(matchId, eventsList, manualWinnerId = null) {
-        return new Promise((resolve, reject) => {
-            const db = getDB();
-            const targetMatchId = Number(matchId);
-            const stores = ['matches', 'teams', 'players', 'events', 'leagues'];
-            const tx = db.transaction(stores, 'readwrite');
-            
-            const matchesStore = tx.objectStore('matches');
-            const teamsStore = tx.objectStore('teams');
-            const playersStore = tx.objectStore('players');
-            const eventsStore = tx.objectStore('events');
-            
-            let match = null;
-            let league = null;
-            
-            // Step 1: Get the match details
-            const matchReq = matchesStore.get(targetMatchId);
-            matchReq.onsuccess = () => {
-                match = matchReq.result;
-                if (!match) {
-                    tx.abort();
-                    reject(new Error('Match not found'));
-                    return;
-                }
-                if (match.status === 'Finalizado') {
-                    tx.abort();
-                    reject(new Error('Match is already finalized'));
-                    return;
-                }
-                
-                // Fetch league mode to validate ties
-                tx.objectStore('leagues').get(match.leagueId).onsuccess = (le) => {
-                    league = le.target.result;
-                    processFinalization();
-                };
-            };
-            
-            function processFinalization() {
-                // Step 2: Calculate score based on events
-                let homeScore = 0;
-                let awayScore = 0;
-                
-                // Count scores
-                eventsList.forEach(ev => {
-                    if (Number(ev.teamId) === match.homeTeamId) {
-                        homeScore++;
-                    } else if (Number(ev.teamId) === match.awayTeamId) {
-                        awayScore++;
-                    }
-                });
-                
-                match.score = { home: homeScore, away: awayScore };
-                match.status = 'Finalizado';
-                
-                // Determine winner
-                let winnerTeamId = null;
-                let isDraw = false;
-                
-                if (homeScore > awayScore) {
-                    winnerTeamId = match.homeTeamId;
-                } else if (awayScore > homeScore) {
-                    winnerTeamId = match.awayTeamId;
-                } else {
-                    isDraw = true;
-                    // In brackets, no ties allowed
-                    if (league.mode === 'eliminacion') {
-                        if (!manualWinnerId) {
-                            tx.abort();
-                            reject(new Error('En llaves de eliminación directa no se permiten empates. Debe declarar un ganador.'));
-                            return;
-                        }
-                        winnerTeamId = Number(manualWinnerId);
-                    }
-                }
-                
-                match.winnerId = winnerTeamId;
-                matchesStore.put(match);
-                
-                // Step 3: Write events to database
-                eventsList.forEach(ev => {
-                    eventsStore.add({
-                        matchId: targetMatchId,
-                        playerId: Number(ev.playerId),
-                        teamId: Number(ev.teamId),
-                        type: ev.type,
-                        minute: ev.minute ? Number(ev.minute) : null,
-                        createdAt: new Date().toISOString()
-                    });
-                });
-                
-                // Step 4: Update Home Team Stats (only in League mode)
-                if (league.mode === 'liga') {
-                    teamsStore.get(match.homeTeamId).onsuccess = (e) => {
-                        const team = e.target.result;
-                        if (team) {
-                            team.stats.played += 1;
-                            team.stats.goalsFor += homeScore;
-                            team.stats.goalsAgainst += awayScore;
-                            team.stats.goalsDiff = team.stats.goalsFor - team.stats.goalsAgainst;
-                            
-                            if (homeScore > awayScore) {
-                                team.stats.won += 1;
-                                team.stats.points += 3;
-                            } else if (homeScore === awayScore) {
-                                team.stats.drawn += 1;
-                                team.stats.points += 1;
-                            } else {
-                                team.stats.lost += 1;
-                            }
-                            teamsStore.put(team);
-                        }
-                    };
-                    
-                    // Update Away Team Stats
-                    teamsStore.get(match.awayTeamId).onsuccess = (e) => {
-                        const team = e.target.result;
-                        if (team) {
-                            team.stats.played += 1;
-                            team.stats.goalsFor += awayScore;
-                            team.stats.goalsAgainst += homeScore;
-                            team.stats.goalsDiff = team.stats.goalsFor - team.stats.goalsAgainst;
-                            
-                            if (awayScore > homeScore) {
-                                team.stats.won += 1;
-                                team.stats.points += 3;
-                            } else if (homeScore === awayScore) {
-                                team.stats.drawn += 1;
-                                team.stats.points += 1;
-                            } else {
-                                team.stats.lost += 1;
-                            }
-                            teamsStore.put(team);
-                        }
-                    };
-                }
-                
-                // Step 5: Update Player Stats
-                // Count scores per player
-                const playerScores = {}; // playerId -> scoreCount
-                eventsList.forEach(ev => {
-                    const pid = Number(ev.playerId);
-                    playerScores[pid] = (playerScores[pid] || 0) + 1;
-                });
-                
-                for (const [pidStr, goalsScored] of Object.entries(playerScores)) {
-                    const pid = Number(pidStr);
-                    playersStore.get(pid).onsuccess = (e) => {
-                        const player = e.target.result;
-                        if (player) {
-                            player.stats.played += 1; // Played this game because they scored
-                            player.stats.goals += goalsScored;
-                            playersStore.put(player);
-                        }
-                    };
-                }
-                
-                // Step 6: Advance winner in bracket if elimination mode
-                if (league.mode === 'eliminacion' && match.nextMatchId) {
-                    const nextMatchId = Number(match.nextMatchId);
-                    matchesStore.get(nextMatchId).onsuccess = (ne) => {
-                        const nextMatch = ne.target.result;
-                        if (nextMatch) {
-                            if (match.nextMatchHomeSlot) {
-                                nextMatch.homeTeamId = winnerTeamId;
-                            } else {
-                                nextMatch.awayTeamId = winnerTeamId;
-                            }
-                            matchesStore.put(nextMatch);
+/**
+ * Elimina una liga y sus entidades asociadas en cascada.
+ * @param {number} leagueId 
+ * @returns {Promise<void>}
+ */
+export function deleteLeagueCascade(leagueId) {
+    return new Promise((resolve, reject) => {
+        const db = getDB();
+        const targetLeagueId = Number(leagueId);
+        const stores = ['leagues', 'teams', 'players', 'matches', 'events'];
+        const tx = db.transaction(stores, 'readwrite');
+        
+        // 1. Delete League
+        tx.objectStore('leagues').delete(targetLeagueId);
+        
+        // 2. Fetch and delete teams and their players
+        const teamsStore = tx.objectStore('teams');
+        const playersStore = tx.objectStore('players');
+        const teamsIndex = teamsStore.index('leagueId');
+        
+        const teamIdsToDelete = [];
+        
+        teamsIndex.openCursor(targetLeagueId).onsuccess = (e) => {
+            const cursor = e.target.result;
+            if (cursor) {
+                const teamId = cursor.value.id;
+                teamIdsToDelete.push(teamId);
+                cursor.delete();
+                cursor.continue();
+            } else {
+                for (const teamId of teamIdsToDelete) {
+                    playersStore.index('teamId').openCursor(teamId).onsuccess = (pe) => {
+                        const pCursor = pe.target.result;
+                        if (pCursor) {
+                            pCursor.delete();
+                            pCursor.continue();
                         }
                     };
                 }
             }
-            
-            tx.oncomplete = () => resolve();
-            tx.onerror = () => reject(tx.error);
-            tx.onabort = () => reject(new Error('Transaction aborted'));
-        });
-    },
-
-    /**
-     * Reverts a finalized match, resetting scores, updating team/player stats, and clearing bracket advances.
-     * @param {number} matchId 
-     * @returns {Promise<void>}
-     */
-    undoMatch(matchId) {
-        return new Promise((resolve, reject) => {
-            const db = getDB();
-            const targetMatchId = Number(matchId);
-            const stores = ['matches', 'teams', 'players', 'events', 'leagues'];
-            const tx = db.transaction(stores, 'readwrite');
-            
-            const matchesStore = tx.objectStore('matches');
-            const teamsStore = tx.objectStore('teams');
-            const playersStore = tx.objectStore('players');
-            const eventsStore = tx.objectStore('events');
-            
-            let match = null;
-            let league = null;
-            let eventsList = [];
-            
-            // 1. Get Match
-            const matchReq = matchesStore.get(targetMatchId);
-            matchReq.onsuccess = () => {
-                match = matchReq.result;
-                if (!match) {
-                    tx.abort();
-                    reject(new Error('Match not found'));
-                    return;
-                }
-                if (match.status !== 'Finalizado') {
-                    tx.abort();
-                    reject(new Error('Match is not finalized'));
-                    return;
-                }
+        };
+        
+        // 3. Delete matches and match events
+        const matchesStore = tx.objectStore('matches');
+        const eventsStore = tx.objectStore('events');
+        
+        matchesStore.index('leagueId').openCursor(targetLeagueId).onsuccess = (me) => {
+            const cursor = me.target.result;
+            if (cursor) {
+                const matchId = cursor.value.id;
+                cursor.delete();
                 
-                // Get League Mode
-                tx.objectStore('leagues').get(match.leagueId).onsuccess = (le) => {
-                    league = le.target.result;
-                    
-                    // Check bracket validation if elimination
-                    if (league.mode === 'eliminacion' && match.nextMatchId) {
-                        matchesStore.get(Number(match.nextMatchId)).onsuccess = (ne) => {
-                            const nextMatch = ne.target.result;
-                            if (nextMatch && nextMatch.status === 'Finalizado') {
-                                tx.abort();
-                                reject(new Error('No se puede deshacer un partido si el partido de la siguiente ronda ya está finalizado. Deshaz el siguiente partido primero.'));
-                                return;
-                            }
-                            fetchEventsAndRevert();
-                        };
-                    } else {
-                        fetchEventsAndRevert();
+                eventsStore.index('matchId').openCursor(matchId).onsuccess = (ee) => {
+                    const eCursor = ee.target.result;
+                    if (eCursor) {
+                        eCursor.delete();
+                        eCursor.continue();
                     }
                 };
-            };
-            
-            function fetchEventsAndRevert() {
-                // 2. Fetch all events of this match
-                eventsStore.index('matchId').getAll(targetMatchId).onsuccess = (ee) => {
-                    eventsList = ee.target.result;
-                    processRevert();
-                };
+                cursor.continue();
             }
-            
-            function processRevert() {
-                const homeScore = match.score.home;
-                const awayScore = match.score.away;
-                const winnerTeamId = match.winnerId;
-                
-                // Revert next match bracket slot if elimination
-                if (league.mode === 'eliminacion' && match.nextMatchId) {
-                    const nextMatchId = Number(match.nextMatchId);
-                    matchesStore.get(nextMatchId).onsuccess = (ne) => {
-                        const nextMatch = ne.target.result;
-                        if (nextMatch) {
-                            if (match.nextMatchHomeSlot) {
-                                nextMatch.homeTeamId = null; // Revert to defined later
-                            } else {
-                                nextMatch.awayTeamId = null;
-                            }
-                            matchesStore.put(nextMatch);
-                        }
-                    };
-                }
-                
-                // Reset match info
-                match.status = 'Programado';
-                match.score = { home: 0, away: 0 };
-                match.winnerId = null;
-                matchesStore.put(match);
-                
-                // Delete match events
-                eventsList.forEach(ev => {
-                    eventsStore.delete(ev.id);
-                });
-                
-                // Revert Team Stats (only in League mode)
-                if (league.mode === 'liga') {
-                    // Revert Home Team Stats
-                    teamsStore.get(match.homeTeamId).onsuccess = (e) => {
-                        const team = e.target.result;
-                        if (team) {
-                            team.stats.played -= 1;
-                            team.stats.goalsFor -= homeScore;
-                            team.stats.goalsAgainst -= awayScore;
-                            team.stats.goalsDiff = team.stats.goalsFor - team.stats.goalsAgainst;
-                            
-                            if (homeScore > awayScore) {
-                                team.stats.won -= 1;
-                                team.stats.points -= 3;
-                            } else if (homeScore === awayScore) {
-                                team.stats.drawn -= 1;
-                                team.stats.points -= 1;
-                            } else {
-                                team.stats.lost -= 1;
-                            }
-                            teamsStore.put(team);
-                        }
-                    };
-                    
-                    // Revert Away Team Stats
-                    teamsStore.get(match.awayTeamId).onsuccess = (e) => {
-                        const team = e.target.result;
-                        if (team) {
-                            team.stats.played -= 1;
-                            team.stats.goalsFor -= awayScore;
-                            team.stats.goalsAgainst -= homeScore;
-                            team.stats.goalsDiff = team.stats.goalsFor - team.stats.goalsAgainst;
-                            
-                            if (awayScore > homeScore) {
-                                team.stats.won -= 1;
-                                team.stats.points -= 3;
-                            } else if (homeScore === awayScore) {
-                                team.stats.drawn -= 1;
-                                team.stats.points -= 1;
-                            } else {
-                                team.stats.lost -= 1;
-                            }
-                            teamsStore.put(team);
-                        }
-                    };
-                }
-                
-                // Revert Player Stats
-                const playerScores = {};
-                eventsList.forEach(ev => {
-                    const pid = Number(ev.playerId);
-                    playerScores[pid] = (playerScores[pid] || 0) + 1;
-                });
-                
-                for (const [pidStr, goalsScored] of Object.entries(playerScores)) {
-                    const pid = Number(pidStr);
-                    playersStore.get(pid).onsuccess = (e) => {
-                        const player = e.target.result;
-                        if (player) {
-                            player.stats.played -= 1;
-                            player.stats.goals -= goalsScored;
-                            playersStore.put(player);
-                        }
-                    };
-                }
-            }
-            
-            tx.oncomplete = () => resolve();
-            tx.onerror = () => reject(tx.error);
-            tx.onabort = () => reject(new Error('Transaction aborted'));
-        });
-    },
+        };
+        
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(new Error('Transaction aborted'));
+    });
+}
 
-    /**
-     * Transactionally inserts list of scheduled matches.
-     * @param {Array} matchesList 
-     * @returns {Promise<void>}
-     */
-    saveMatchesList(matchesList) {
-        return new Promise((resolve, reject) => {
-            const db = getDB();
-            const tx = db.transaction('matches', 'readwrite');
-            const store = tx.objectStore('matches');
+/**
+ * Finaliza un partido, registra eventos, actualiza estadísticas y avanza el ganador si es eliminatoria.
+ * @param {number} matchId 
+ * @param {Array} eventsList 
+ * @param {number|null} manualWinnerId 
+ * @returns {Promise<void>}
+ */
+export function finalizeMatch(matchId, eventsList, manualWinnerId = null) {
+    return new Promise((resolve, reject) => {
+        const db = getDB();
+        const targetMatchId = Number(matchId);
+        const stores = ['matches', 'teams', 'players', 'events', 'leagues'];
+        const tx = db.transaction(stores, 'readwrite');
+        
+        const matchesStore = tx.objectStore('matches');
+        const teamsStore = tx.objectStore('teams');
+        const playersStore = tx.objectStore('players');
+        const eventsStore = tx.objectStore('events');
+        
+        let match = null;
+        let league = null;
+        
+        const matchReq = matchesStore.get(targetMatchId);
+        matchReq.onsuccess = () => {
+            match = matchReq.result;
+            if (!match) {
+                tx.abort();
+                reject(new Error('Match not found'));
+                return;
+            }
+            if (match.status === 'Finalizado') {
+                tx.abort();
+                reject(new Error('Match is already finalized'));
+                return;
+            }
             
-            matchesList.forEach(m => {
-                store.add({
-                    leagueId: Number(m.leagueId),
-                    homeTeamId: m.homeTeamId ? Number(m.homeTeamId) : null,
-                    awayTeamId: m.awayTeamId ? Number(m.awayTeamId) : null,
-                    date: m.date || null,
-                    status: m.status || 'Programado',
-                    score: m.score || { home: 0, away: 0 },
-                    round: m.round !== undefined ? m.round : null,
-                    nextMatchId: m.nextMatchId ? Number(m.nextMatchId) : null,
-                    nextMatchHomeSlot: m.nextMatchHomeSlot !== undefined ? m.nextMatchHomeSlot : null,
-                    winnerId: null,
+            tx.objectStore('leagues').get(match.leagueId).onsuccess = (le) => {
+                league = le.target.result;
+                processFinalization();
+            };
+        };
+        
+        function processFinalization() {
+            let homeScore = 0;
+            let awayScore = 0;
+            
+            eventsList.forEach(ev => {
+                if (Number(ev.teamId) === match.homeTeamId) {
+                    homeScore++;
+                } else if (Number(ev.teamId) === match.awayTeamId) {
+                    awayScore++;
+                }
+            });
+            
+            match.score = { home: homeScore, away: awayScore };
+            match.status = 'Finalizado';
+            
+            let winnerTeamId = null;
+            
+            if (homeScore > awayScore) {
+                winnerTeamId = match.homeTeamId;
+            } else if (awayScore > homeScore) {
+                winnerTeamId = match.awayTeamId;
+            } else {
+                if (league.mode === 'eliminacion') {
+                    if (!manualWinnerId) {
+                        tx.abort();
+                        reject(new Error('En llaves de eliminación directa no se permiten empates. Debe declarar un ganador.'));
+                        return;
+                    }
+                    winnerTeamId = Number(manualWinnerId);
+                }
+            }
+            
+            match.winnerId = winnerTeamId;
+            matchesStore.put(match);
+            
+            eventsList.forEach(ev => {
+                eventsStore.add({
+                    matchId: targetMatchId,
+                    playerId: Number(ev.playerId),
+                    teamId: Number(ev.teamId),
+                    type: ev.type,
+                    minute: ev.minute ? Number(ev.minute) : null,
                     createdAt: new Date().toISOString()
                 });
             });
             
-            tx.oncomplete = () => resolve();
-            tx.onerror = () => reject(tx.error);
-        });
-    },
+            if (league.mode === 'liga') {
+                teamsStore.get(match.homeTeamId).onsuccess = (e) => {
+                    const team = e.target.result;
+                    if (team) {
+                        team.stats.played += 1;
+                        team.stats.goalsFor += homeScore;
+                        team.stats.goalsAgainst += awayScore;
+                        team.stats.goalsDiff = team.stats.goalsFor - team.stats.goalsAgainst;
+                        
+                        if (homeScore > awayScore) {
+                            team.stats.won += 1;
+                            team.stats.points += 3;
+                        } else if (homeScore === awayScore) {
+                            team.stats.drawn += 1;
+                            team.stats.points += 1;
+                        } else {
+                            team.stats.lost += 1;
+                        }
+                        teamsStore.put(team);
+                    }
+                };
+                
+                teamsStore.get(match.awayTeamId).onsuccess = (e) => {
+                    const team = e.target.result;
+                    if (team) {
+                        team.stats.played += 1;
+                        team.stats.goalsFor += awayScore;
+                        team.stats.goalsAgainst += homeScore;
+                        team.stats.goalsDiff = team.stats.goalsFor - team.stats.goalsAgainst;
+                        
+                        if (awayScore > homeScore) {
+                            team.stats.won += 1;
+                            team.stats.points += 3;
+                        } else if (homeScore === awayScore) {
+                            team.stats.drawn += 1;
+                            team.stats.points += 1;
+                        } else {
+                            team.stats.lost += 1;
+                        }
+                        teamsStore.put(team);
+                    }
+                };
+            }
+            
+            const playerScores = {};
+            eventsList.forEach(ev => {
+                const pid = Number(ev.playerId);
+                playerScores[pid] = (playerScores[pid] || 0) + 1;
+            });
+            
+            for (const [pidStr, goalsScored] of Object.entries(playerScores)) {
+                const pid = Number(pidStr);
+                playersStore.get(pid).onsuccess = (e) => {
+                    const player = e.target.result;
+                    if (player) {
+                        player.stats.played += 1;
+                        player.stats.goals += goalsScored;
+                        playersStore.put(player);
+                    }
+                };
+            }
+            
+            if (league.mode === 'eliminacion' && match.nextMatchId) {
+                const nextMatchId = Number(match.nextMatchId);
+                matchesStore.get(nextMatchId).onsuccess = (ne) => {
+                    const nextMatch = ne.target.result;
+                    if (nextMatch) {
+                        if (match.nextMatchHomeSlot) {
+                            nextMatch.homeTeamId = winnerTeamId;
+                        } else {
+                            nextMatch.awayTeamId = winnerTeamId;
+                        }
+                        matchesStore.put(nextMatch);
+                    }
+                };
+            }
+        }
+        
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(new Error('Transaction aborted'));
+    });
+}
 
-    /**
-     * Imports an entire league dump (league, teams, players, matches, events) in one transaction.
-     * @param {object} dump 
-     * @returns {Promise<void>}
-     */
-    importLeagueData(dump) {
-        return new Promise((resolve, reject) => {
-            const db = getDB();
-            const stores = ['leagues', 'teams', 'players', 'matches', 'events'];
-            const tx = db.transaction(stores, 'readwrite');
+/**
+ * Revierte un partido finalizado a programado.
+ * @param {number} matchId 
+ * @returns {Promise<void>}
+ */
+export function undoMatch(matchId) {
+    return new Promise((resolve, reject) => {
+        const db = getDB();
+        const targetMatchId = Number(matchId);
+        const stores = ['matches', 'teams', 'players', 'events', 'leagues'];
+        const tx = db.transaction(stores, 'readwrite');
+        
+        const matchesStore = tx.objectStore('matches');
+        const teamsStore = tx.objectStore('teams');
+        const playersStore = tx.objectStore('players');
+        const eventsStore = tx.objectStore('events');
+        
+        let match = null;
+        let league = null;
+        let eventsList = [];
+        
+        const matchReq = matchesStore.get(targetMatchId);
+        matchReq.onsuccess = () => {
+            match = matchReq.result;
+            if (!match) {
+                tx.abort();
+                reject(new Error('Match not found'));
+                return;
+            }
+            if (match.status !== 'Finalizado') {
+                tx.abort();
+                reject(new Error('Match is not finalized'));
+                return;
+            }
             
-            const leaguesStore = tx.objectStore('leagues');
-            const teamsStore = tx.objectStore('teams');
-            const playersStore = tx.objectStore('players');
-            const matchesStore = tx.objectStore('matches');
-            const eventsStore = tx.objectStore('events');
-            
-            // Map old IDs to newly generated IDs to preserve relationships
-            const teamIdMap = {};
-            const playerIdMap = {};
-            const matchIdMap = {};
-            
-            // 1. Add League
-            const oldLeague = dump.league;
-            const newLeagueData = {
-                name: oldLeague.name.trim(),
-                sport: oldLeague.sport,
-                mode: oldLeague.mode,
-                rounds: oldLeague.rounds || null,
-                bracketTeamsCount: oldLeague.bracketTeamsCount || null,
-                season: oldLeague.season.trim(),
-                description: oldLeague.description || '',
-                isActive: false, // Don't make it active immediately
-                createdAt: oldLeague.createdAt || new Date().toISOString()
+            tx.objectStore('leagues').get(match.leagueId).onsuccess = (le) => {
+                league = le.target.result;
+                
+                if (league.mode === 'eliminacion' && match.nextMatchId) {
+                    matchesStore.get(Number(match.nextMatchId)).onsuccess = (ne) => {
+                        const nextMatch = ne.target.result;
+                        if (nextMatch && nextMatch.status === 'Finalizado') {
+                            tx.abort();
+                            reject(new Error('No se puede deshacer un partido si el partido de la siguiente ronda ya está finalizado. Deshaz el siguiente partido primero.'));
+                            return;
+                        }
+                        fetchEventsAndRevert();
+                    };
+                } else {
+                    fetchEventsAndRevert();
+                }
             };
+        };
+        
+        function fetchEventsAndRevert() {
+            eventsStore.index('matchId').getAll(targetMatchId).onsuccess = (ee) => {
+                eventsList = ee.target.result;
+                processRevert();
+            };
+        }
+        
+        function processRevert() {
+            const homeScore = match.score.home;
+            const awayScore = match.score.away;
             
-            const leagueAddReq = leaguesStore.add(newLeagueData);
-            leagueAddReq.onsuccess = () => {
-                const newLeagueId = leagueAddReq.result;
+            if (league.mode === 'eliminacion' && match.nextMatchId) {
+                const nextMatchId = Number(match.nextMatchId);
+                matchesStore.get(nextMatchId).onsuccess = (ne) => {
+                    const nextMatch = ne.target.result;
+                    if (nextMatch) {
+                        if (match.nextMatchHomeSlot) {
+                            nextMatch.homeTeamId = null;
+                        } else {
+                            nextMatch.awayTeamId = null;
+                        }
+                        matchesStore.put(nextMatch);
+                    }
+                };
+            }
+            
+            match.status = 'Programado';
+            match.score = { home: 0, away: 0 };
+            match.winnerId = null;
+            matchesStore.put(match);
+            
+            eventsList.forEach(ev => {
+                eventsStore.delete(ev.id);
+            });
+            
+            if (league.mode === 'liga') {
+                teamsStore.get(match.homeTeamId).onsuccess = (e) => {
+                    const team = e.target.result;
+                    if (team) {
+                        team.stats.played -= 1;
+                        team.stats.goalsFor -= homeScore;
+                        team.stats.goalsAgainst -= awayScore;
+                        team.stats.goalsDiff = team.stats.goalsFor - team.stats.goalsAgainst;
+                        
+                        if (homeScore > awayScore) {
+                            team.stats.won -= 1;
+                            team.stats.points -= 3;
+                        } else if (homeScore === awayScore) {
+                            team.stats.drawn -= 1;
+                            team.stats.points -= 1;
+                        } else {
+                            team.stats.lost -= 1;
+                        }
+                        teamsStore.put(team);
+                    }
+                };
                 
-                // 2. Import Teams
-                let teamsImported = 0;
-                const teamsToImport = dump.teams || [];
+                teamsStore.get(match.awayTeamId).onsuccess = (e) => {
+                    const team = e.target.result;
+                    if (team) {
+                        team.stats.played -= 1;
+                        team.stats.goalsFor -= awayScore;
+                        team.stats.goalsAgainst -= homeScore;
+                        team.stats.goalsDiff = team.stats.goalsFor - team.stats.goalsAgainst;
+                        
+                        if (awayScore > homeScore) {
+                            team.stats.won -= 1;
+                            team.stats.points -= 3;
+                        } else if (homeScore === awayScore) {
+                            team.stats.drawn -= 1;
+                            team.stats.points -= 1;
+                        } else {
+                            team.stats.lost -= 1;
+                        }
+                        teamsStore.put(team);
+                    }
+                };
+            }
+            
+            const playerScores = {};
+            eventsList.forEach(ev => {
+                const pid = Number(ev.playerId);
+                playerScores[pid] = (playerScores[pid] || 0) + 1;
+            });
+            
+            for (const [pidStr, goalsScored] of Object.entries(playerScores)) {
+                const pid = Number(pidStr);
+                playersStore.get(pid).onsuccess = (e) => {
+                    const player = e.target.result;
+                    if (player) {
+                        player.stats.played -= 1;
+                        player.stats.goals -= goalsScored;
+                        playersStore.put(player);
+                    }
+                };
+            }
+        }
+        
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(new Error('Transaction aborted'));
+    });
+}
+
+/**
+ * Guarda una lista de partidos programados.
+ * @param {Array} matchesList 
+ * @returns {Promise<void>}
+ */
+export function saveMatchesList(matchesList) {
+    return new Promise((resolve, reject) => {
+        const db = getDB();
+        const tx = db.transaction('matches', 'readwrite');
+        const store = tx.objectStore('matches');
+        
+        matchesList.forEach(m => {
+            store.add({
+                leagueId: Number(m.leagueId),
+                homeTeamId: m.homeTeamId ? Number(m.homeTeamId) : null,
+                awayTeamId: m.awayTeamId ? Number(m.awayTeamId) : null,
+                date: m.date || null,
+                status: m.status || 'Programado',
+                score: m.score || { home: 0, away: 0 },
+                round: m.round !== undefined ? m.round : null,
+                nextMatchId: m.nextMatchId ? Number(m.nextMatchId) : null,
+                nextMatchHomeSlot: m.nextMatchHomeSlot !== undefined ? m.nextMatchHomeSlot : null,
+                winnerId: null,
+                createdAt: new Date().toISOString()
+            });
+        });
+        
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+/**
+ * Importa los datos completos de una liga.
+ * @param {object} dump 
+ * @returns {Promise<void>}
+ */
+export function importLeagueData(dump) {
+    return new Promise((resolve, reject) => {
+        const db = getDB();
+        const stores = ['leagues', 'teams', 'players', 'matches', 'events'];
+        const tx = db.transaction(stores, 'readwrite');
+        
+        const leaguesStore = tx.objectStore('leagues');
+        const teamsStore = tx.objectStore('teams');
+        const playersStore = tx.objectStore('players');
+        const matchesStore = tx.objectStore('matches');
+        const eventsStore = tx.objectStore('events');
+        
+        const teamIdMap = {};
+        const playerIdMap = {};
+        const matchIdMap = {};
+        
+        const oldLeague = dump.league;
+        const newLeagueData = {
+            name: oldLeague.name.trim(),
+            sport: oldLeague.sport,
+            mode: oldLeague.mode,
+            rounds: oldLeague.rounds || null,
+            bracketTeamsCount: oldLeague.bracketTeamsCount || null,
+            season: oldLeague.season.trim(),
+            description: oldLeague.description || '',
+            isActive: false,
+            createdAt: oldLeague.createdAt || new Date().toISOString()
+        };
+        
+        const leagueAddReq = leaguesStore.add(newLeagueData);
+        leagueAddReq.onsuccess = () => {
+            const newLeagueId = leagueAddReq.result;
+            let teamsImported = 0;
+            const teamsToImport = dump.teams || [];
+            
+            if (teamsToImport.length === 0) {
+                importMatches();
+                return;
+            }
+            
+            teamsToImport.forEach(team => {
+                const oldTeamId = team.id;
+                const newTeamData = {
+                    leagueId: newLeagueId,
+                    name: team.name,
+                    shield: team.shield || '',
+                    primaryColor: team.primaryColor || '#3b82f6',
+                    secondaryColor: team.secondaryColor || '#1e3a8a',
+                    city: team.city || '',
+                    stats: team.stats || { played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalsDiff: 0, points: 0 },
+                    createdAt: team.createdAt || new Date().toISOString()
+                };
                 
-                if (teamsToImport.length === 0) {
-                    importMatches(); // Proceed to matches if no teams
+                const teamAddReq = teamsStore.add(newTeamData);
+                teamAddReq.onsuccess = () => {
+                    const newTeamId = teamAddReq.result;
+                    teamIdMap[oldTeamId] = newTeamId;
+                    teamsImported++;
+                    
+                    const teamPlayers = (dump.players || []).filter(p => p.teamId === oldTeamId);
+                    teamPlayers.forEach(player => {
+                        const oldPlayerId = player.id;
+                        const newPlayerData = {
+                            teamId: newTeamId,
+                            name: player.name,
+                            photo: player.photo || '',
+                            position: player.position || '',
+                            number: player.number,
+                            stats: player.stats || { played: 0, goals: 0 },
+                            createdAt: player.createdAt || new Date().toISOString()
+                        };
+                        
+                        const playerAddReq = playersStore.add(newPlayerData);
+                        playerAddReq.onsuccess = () => {
+                            playerIdMap[oldPlayerId] = playerAddReq.result;
+                        };
+                    });
+                    
+                    if (teamsImported === teamsToImport.length) {
+                        importMatches();
+                    }
+                };
+            });
+            
+            function importMatches() {
+                const matchesToImport = dump.matches || [];
+                let matchesImported = 0;
+                
+                if (matchesToImport.length === 0) {
+                    resolve();
                     return;
                 }
                 
-                teamsToImport.forEach(team => {
-                    const oldTeamId = team.id;
-                    const newTeamData = {
+                const pendingNextMatchResolutions = [];
+                
+                matchesToImport.forEach(match => {
+                    const oldMatchId = match.id;
+                    const newMatchData = {
                         leagueId: newLeagueId,
-                        name: team.name,
-                        shield: team.shield || '',
-                        primaryColor: team.primaryColor || '#3b82f6',
-                        secondaryColor: team.secondaryColor || '#1e3a8a',
-                        city: team.city || '',
-                        stats: team.stats || { played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalsDiff: 0, points: 0 },
-                        createdAt: team.createdAt || new Date().toISOString()
+                        homeTeamId: match.homeTeamId ? teamIdMap[match.homeTeamId] : null,
+                        awayTeamId: match.awayTeamId ? teamIdMap[match.awayTeamId] : null,
+                        date: match.date || null,
+                        status: match.status || 'Programado',
+                        score: match.score || { home: 0, away: 0 },
+                        round: match.round !== undefined ? match.round : null,
+                        nextMatchId: null,
+                        nextMatchHomeSlot: match.nextMatchHomeSlot !== undefined ? match.nextMatchHomeSlot : null,
+                        winnerId: match.winnerId ? teamIdMap[match.winnerId] : null,
+                        createdAt: match.createdAt || new Date().toISOString()
                     };
                     
-                    const teamAddReq = teamsStore.add(newTeamData);
-                    teamAddReq.onsuccess = () => {
-                        const newTeamId = teamAddReq.result;
-                        teamIdMap[oldTeamId] = newTeamId;
-                        teamsImported++;
+                    const matchAddReq = matchesStore.add(newMatchData);
+                    matchAddReq.onsuccess = () => {
+                        const newMatchId = matchAddReq.result;
+                        matchIdMap[oldMatchId] = newMatchId;
+                        matchesImported++;
                         
-                        // Import players for this team
-                        const teamPlayers = (dump.players || []).filter(p => p.teamId === oldTeamId);
-                        teamPlayers.forEach(player => {
-                            const oldPlayerId = player.id;
-                            const newPlayerData = {
-                                teamId: newTeamId,
-                                name: player.name,
-                                photo: player.photo || '',
-                                position: player.position || '',
-                                number: player.number,
-                                stats: player.stats || { played: 0, goals: 0 },
-                                createdAt: player.createdAt || new Date().toISOString()
-                            };
-                            
-                            const playerAddReq = playersStore.add(newPlayerData);
-                            playerAddReq.onsuccess = () => {
-                                playerIdMap[oldPlayerId] = playerAddReq.result;
-                            };
+                        if (match.nextMatchId) {
+                            pendingNextMatchResolutions.push({
+                                newMatchId: newMatchId,
+                                oldNextMatchId: match.nextMatchId
+                            });
+                        }
+                        
+                        const matchEvents = (dump.events || []).filter(e => e.matchId === oldMatchId);
+                        matchEvents.forEach(ev => {
+                            eventsStore.add({
+                                matchId: newMatchId,
+                                playerId: playerIdMap[ev.playerId],
+                                teamId: teamIdMap[ev.teamId],
+                                type: ev.type,
+                                minute: ev.minute ? Number(ev.minute) : null,
+                                createdAt: ev.createdAt || new Date().toISOString()
+                            });
                         });
                         
-                        if (teamsImported === teamsToImport.length) {
-                            importMatches();
+                        if (matchesImported === matchesToImport.length) {
+                            resolveNextMatches();
                         }
                     };
                 });
                 
-                function importMatches() {
-                    // 3. Import Matches
-                    const matchesToImport = dump.matches || [];
-                    let matchesImported = 0;
-                    
-                    if (matchesToImport.length === 0) {
+                function resolveNextMatches() {
+                    if (pendingNextMatchResolutions.length === 0) {
                         resolve();
                         return;
                     }
                     
-                    // We need to do a two-pass import to restore nextMatchId linkage in brackets
-                    const pendingNextMatchResolutions = []; // { matchReq, oldNextMatchId }
-                    
-                    matchesToImport.forEach(match => {
-                        const oldMatchId = match.id;
-                        const newMatchData = {
-                            leagueId: newLeagueId,
-                            homeTeamId: match.homeTeamId ? teamIdMap[match.homeTeamId] : null,
-                            awayTeamId: match.awayTeamId ? teamIdMap[match.awayTeamId] : null,
-                            date: match.date || null,
-                            status: match.status || 'Programado',
-                            score: match.score || { home: 0, away: 0 },
-                            round: match.round !== undefined ? match.round : null,
-                            nextMatchId: null, // Resolving in second pass
-                            nextMatchHomeSlot: match.nextMatchHomeSlot !== undefined ? match.nextMatchHomeSlot : null,
-                            winnerId: match.winnerId ? teamIdMap[match.winnerId] : null,
-                            createdAt: match.createdAt || new Date().toISOString()
-                        };
-                        
-                        const matchAddReq = matchesStore.add(newMatchData);
-                        matchAddReq.onsuccess = () => {
-                            const newMatchId = matchAddReq.result;
-                            matchIdMap[oldMatchId] = newMatchId;
-                            matchesImported++;
-                            
-                            if (match.nextMatchId) {
-                                pendingNextMatchResolutions.push({
-                                    newMatchId: newMatchId,
-                                    oldNextMatchId: match.nextMatchId
-                                });
-                            }
-                            
-                            // Import events of this match
-                            const matchEvents = (dump.events || []).filter(e => e.matchId === oldMatchId);
-                            matchEvents.forEach(ev => {
-                                eventsStore.add({
-                                    matchId: newMatchId,
-                                    playerId: playerIdMap[ev.playerId],
-                                    teamId: teamIdMap[ev.teamId],
-                                    type: ev.type,
-                                    minute: ev.minute ? Number(ev.minute) : null,
-                                    createdAt: ev.createdAt || new Date().toISOString()
-                                });
-                            });
-                            
-                            if (matchesImported === matchesToImport.length) {
-                                // Execute second pass to fix nextMatchIds
-                                resolveNextMatches();
+                    let resolvedCount = 0;
+                    pendingNextMatchResolutions.forEach(res => {
+                        matchesStore.get(res.newMatchId).onsuccess = (e) => {
+                            const m = e.target.result;
+                            if (m) {
+                                m.nextMatchId = matchIdMap[res.oldNextMatchId] || null;
+                                matchesStore.put(m).onsuccess = () => {
+                                    resolvedCount++;
+                                    if (resolvedCount === pendingNextMatchResolutions.length) {
+                                        resolve();
+                                    }
+                                };
                             }
                         };
                     });
-                    
-                    function resolveNextMatches() {
-                        if (pendingNextMatchResolutions.length === 0) {
-                            resolve();
-                            return;
-                        }
-                        
-                        let resolvedCount = 0;
-                        pendingNextMatchResolutions.forEach(res => {
-                            matchesStore.get(res.newMatchId).onsuccess = (e) => {
-                                const m = e.target.result;
-                                if (m) {
-                                    m.nextMatchId = matchIdMap[res.oldNextMatchId] || null;
-                                    matchesStore.put(m).onsuccess = () => {
-                                        resolvedCount++;
-                                        if (resolvedCount === pendingNextMatchResolutions.length) {
-                                            resolve();
-                                        }
-                                    };
-                                }
-                            };
-                        });
-                    }
                 }
-            };
-            
-            tx.oncomplete = () => resolve();
-            tx.onerror = () => reject(tx.error);
-        });
-    }
+            }
+        };
+        
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+// Aliases nombrados alternativos para compatibilidad
+export const revertMatch = undoMatch;
+
+// Compatibilidad con exportación por objeto
+export const transactions = {
+    activateLeague,
+    deleteLeagueCascade,
+    finalizeMatch,
+    undoMatch,
+    revertMatch,
+    saveMatchesList,
+    importLeagueData
 };

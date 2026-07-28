@@ -1,17 +1,23 @@
 import { renderDashboard } from './views/dashboard.view.js';
 import { renderLeagues } from './views/leagues.view.js';
-import { renderTeams } from './views/teams.view.js'; 
+import { renderTeams } from './views/teams.view.js';
+ 
+import { renderMatches } from './views/matches.view.js';
+import { renderMatchDetail } from './views/match-detail.view.js';
+import { renderPlayers } from './views/players.view.js';
+import { renderPlayerDetail } from './views/player-detail.view.js';
+import { renderStats } from './views/stats-view.js';
 
 const routes = {
     'dashboard': renderDashboard, 
     'leagues': renderLeagues,
     'teams': renderTeams, 
-    'team': null,     
-    'players': null,
-    'player': null,   // expects parameter :id
-    'matches': null,
-    'match': null,    // expects parameter :id
-    'stats': null
+    'team': null, // Placeholder for team detail route
+    'matches': renderMatches,
+    'match': renderMatchDetail,      
+    'players': renderPlayers,
+    'player': renderPlayerDetail,   
+    'stats': renderStats
 };
 
 class Router {
@@ -46,26 +52,29 @@ class Router {
         window.location.hash = hash;
     }
 
-    /**
-     * Resolves the current hash, extracts params, and triggers rendering
-     */
+  
+    
     async handleRouting() {
         if (!this.appContainer) return;
 
         let hash = window.location.hash.substring(1) || 'dashboard';
         
-        // Remove trailing slashes and split by path separator
+      
         const pathParts = hash.split('/').filter(Boolean);
         const routeName = pathParts[0] || 'dashboard';
-        const parameter = pathParts[1] || null;
+        const rawParameter = pathParts[1] || null;
 
-        // Show global loading state while switching views
+
+        const params = { id: rawParameter };
+
+        
         this.appContainer.innerHTML = '<loading-state></loading-state>';
 
         const renderFn = routes[routeName];
         if (typeof renderFn === 'function') {
             try {
-                await renderFn(this.appContainer, parameter);
+                
+                await renderFn(this.appContainer, params);
             } catch (err) {
                 console.error(`Error rendering route "${routeName}":`, err);
                 this.appContainer.innerHTML = `
@@ -77,7 +86,7 @@ class Router {
                 `;
             }
         } else {
-            // 404 / Route not found fallback
+         
             this.appContainer.innerHTML = `
                 <div class="glass-card text-center" style="margin-top: 50px;">
                     <h2>Vista no Encontrada (404)</h2>
@@ -87,7 +96,7 @@ class Router {
             `;
         }
 
-        // Highlight active link in Navbar element
+   
         const navbar = document.querySelector('league-navbar');
         if (navbar && typeof navbar.setActiveLink === 'function') {
             navbar.setActiveLink(routeName);

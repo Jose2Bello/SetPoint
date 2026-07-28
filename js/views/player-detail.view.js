@@ -1,4 +1,3 @@
-// js/views/player-detail.view.js
 import { getPlayerById } from '../db/players.db.js';
 import { getTeamById } from '../db/teams.db.js';
 import { getEventsByPlayer } from '../db/events.db.js';
@@ -33,7 +32,6 @@ export async function renderPlayerDetail(container, params) {
 
     container.textContent = '';
 
-    // Navegación de retorno
     const backNav = document.createElement('div');
     backNav.className = 'back-nav';
     const backLink = document.createElement('a');
@@ -43,7 +41,6 @@ export async function renderPlayerDetail(container, params) {
     backNav.appendChild(backLink);
     container.appendChild(backNav);
 
-    // Cabecera de perfil
     const profileHeader = document.createElement('div');
     profileHeader.className = 'profile-header glass-panel';
 
@@ -94,7 +91,6 @@ export async function renderPlayerDetail(container, params) {
     profileHeader.appendChild(profileInfo);
     container.appendChild(profileHeader);
 
-    // Tarjetas de estadísticas
     const statsGrid = document.createElement('div');
     statsGrid.className = 'stats-overview-grid';
 
@@ -111,7 +107,7 @@ export async function renderPlayerDetail(container, params) {
         return card;
     };
 
-    const matchesPlayed = player.stats?.matchesPlayed || 0;
+    const matchesPlayed = player.stats?.played ?? player.stats?.matchesPlayed ?? 0;
     const totalGoals = player.stats?.goals || 0;
     const average = matchesPlayed ? (totalGoals / matchesPlayed).toFixed(2) : '0.00';
 
@@ -120,7 +116,6 @@ export async function renderPlayerDetail(container, params) {
     statsGrid.appendChild(createStatCard('Promedio por Partido', average));
     container.appendChild(statsGrid);
 
-    // Historial de eventos
     const sectionContainer = document.createElement('div');
     sectionContainer.className = 'section-container glass-panel';
     const h2History = document.createElement('h2');
