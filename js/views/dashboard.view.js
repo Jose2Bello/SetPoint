@@ -89,8 +89,8 @@ export async function renderDashboard(container) {
                     <canvas id="chartTimeline"></canvas>
                 </div>
             </div>
-            <footer style="margin-top: auto; padding: 1.5rem; border-top: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
-                <p>© 2026 SetPoint. Desarrollado por Jose Lopez y Santiago Salas</p>
+            <footer style="margin-top: auto; width: 100%; padding: 1.5rem; border-top: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; background: inherit; box-sizing: border-box;">
+                <p style="margin: 0;">© 2026 SetPoint. Desarrollado por Jose Lopez y Santiago Salas</p>
                 <div>Base de Datos: <span style="color: #10b981;">Conectado</span></div>
             </footer>
         </div>
