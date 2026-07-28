@@ -1,4 +1,3 @@
-/* js/components/navbar.js */
 import { storage } from '../utils/storage.js';
 import { leaguesDb } from '../db/leagues.db.js';
 import { SPORTS } from '../sports-terms.js';
@@ -9,9 +8,15 @@ class LeagueNavbar extends HTMLElement {
         this.activeRoute = 'dashboard';
     }
 
-    async connectedCallback() {
+    connectedCallback() {
         this.render();
-        window.addEventListener('league-activated', () => this.render());
+    
+        this._boundHandleLeagueActivation = () => this.render();
+        window.addEventListener('league-activated', this._boundHandleLeagueActivation);
+    }
+
+    disconnectedCallback() {
+        window.removeEventListener('league-activated', this._boundHandleLeagueActivation);
     }
 
     setActiveLink(routeName) {
@@ -46,32 +51,31 @@ class LeagueNavbar extends HTMLElement {
         }
 
         this.innerHTML = `
-    <header class="header-container">
-        <!-- 1. Marca (Izquierda) -->
-        <div class="nav-brand">
-            <a href="#dashboard" class="flex align-center gap-sm">
-                <span class="brand-logo"></span>
-                <span class="brand-title font-bold">SetPoint</span>
-            </a>
-        </div>
-        
-        <!-- 2. Navegación (Centro) -->
-        <nav class="nav-links flex gap-md">
-            <a href="#dashboard" class="${this.activeRoute === 'dashboard' ? 'active' : ''}">Inicio</a>
-            <a href="#leagues" class="${this.activeRoute === 'leagues' ? 'active' : ''}">Ligas</a>
-            <a href="#teams" class="${this.activeRoute === 'teams' ? 'active' : ''}">Equipos</a>
-            <a href="#players" class="${this.activeRoute === 'players' ? 'active' : ''}">Jugadores</a>
-            <a href="#matches" class="${this.activeRoute === 'matches' ? 'active' : ''}">Partidos</a>
-            <a href="#stats" class="${this.activeRoute === 'stats' ? 'active' : ''}">Estadísticas</a>
-        </nav>
+        <header class="header-container">
+            <!-- 1. Marca (Izquierda) -->
+            <div class="nav-brand">
+                <a href="#dashboard" class="flex align-center gap-sm">
+                    <span class="brand-logo"></span>
+                    <span class="brand-title font-bold">SetPoint</span>
+                </a>
+            </div>
+            
+            <!-- 2. Navegación (Centro) -->
+            <nav class="nav-links flex gap-md">
+                <a href="#dashboard" class="${this.activeRoute === 'dashboard' ? 'active' : ''}">Inicio</a>
+                <a href="#leagues" class="${this.activeRoute === 'leagues' ? 'active' : ''}">Ligas</a>
+                <a href="#teams" class="${this.activeRoute === 'teams' ? 'active' : ''}">Equipos</a>
+                <a href="#players" class="${this.activeRoute === 'players' ? 'active' : ''}">Jugadores</a>
+                <a href="#matches" class="${this.activeRoute === 'matches' ? 'active' : ''}">Partidos</a>
+                <a href="#stats" class="${this.activeRoute === 'stats' ? 'active' : ''}">Estadísticas</a>
+            </nav>
 
-      
-                <div class="nav-league-info text-secondary font-medium">
+            <div class="nav-league-info text-secondary font-medium">
                 ${leagueInfo}
-        </div>
-    </header>
-`;
+            </div>
+        </header>
+        `;
     }
 }
 
-customElements.define('league-navbar', LeagueNavbar);
+customElements.define('league-navbar', LeagueNavbar)

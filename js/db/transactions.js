@@ -25,18 +25,18 @@ export const transactions = {
                         cursor.update(league);
                     }
                     cursor.continue();
-                } else {
-                    // Cursor finished
-                    resolve();
                 }
             };
             
-            tx.oncomplete = () => resolve();
+            tx.oncomplete = () => {
+               
+                window.dispatchEvent(new CustomEvent('league-activated'));
+                resolve();
+            };
             tx.onerror = () => reject(tx.error);
             tx.onabort = () => reject(new Error('Transaction aborted'));
         });
     },
-
     /**
      * Deletes a league and all its cascaded entities in a single transaction.
      * @param {number} leagueId 
