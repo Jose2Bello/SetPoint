@@ -31,70 +31,108 @@ export async function renderDashboard(container) {
     const nextMatch = matches.find(m => m.status === 'Programado');
     const lastMatch = [...matches].reverse().find(m => m.status === 'Finalizado');
 
+    const totalMatches = matches.length;
+    const totalTeams = teams.length;
+    const completedMatches = matches.filter(m => m.status === 'Finalizado').length;
+
     // 1. Inyectar HTML Base
     container.innerHTML = `
-        <div class="dashboard-header">
-            <div>
-                <h1 class="text-2xl font-bold">${league.name}</h1>
-                <p class="text-sm text-muted">Temporada: ${league.season || 'Sin especificar'}</p>
+        <div class="dashboard-container">
+            <div class="dashboard-header">
+                <div>
+                    <h1>${league.name}</h1>
+                    <p class="text-sm text-muted" style="margin: 0.25rem 0 0 0;">Temporada: <strong>${league.season || 'Sin especificar'}</strong></p>
+                </div>
+                <div class="dashboard-header-info">
+                    <span class="dashboard-badge">${sportTerm.icon} ${sportTerm.name}</span>
+                    <a href="#leagues" class="btn btn-secondary text-sm">Cambiar Liga</a>
+                </div>
             </div>
-            <div class="dashboard-header-info">
-                <span class="dashboard-badge">${sportTerm.icon} ${sportTerm.name}</span>
-                <a href="#leagues" class="btn btn-secondary text-sm">Cambiar Liga</a>
+
+            <!-- Fila de Métricas Rápidas -->
+            <div class="metrics-row">
+                <div class="metric-card">
+                    <div class="metric-icon">🛡️</div>
+                    <div>
+                        <div class="metric-val">${totalTeams}</div>
+                        <div class="metric-label">Equipos Registrados</div>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon">⚽</div>
+                    <div>
+                        <div class="metric-val">${totalMatches}</div>
+                        <div class="metric-label">Partidos Totales</div>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon">🏆</div>
+                    <div>
+                        <div class="metric-val">${completedMatches}</div>
+                        <div class="metric-label">Partidos Finalizados</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grid de Contenido -->
+            <div class="dashboard-grid">
+                <!-- Próximo Partido -->
+                <div class="dashboard-card col-span-6">
+                    <div class="dashboard-card-title">
+                        <span>📅 Próximo Partido</span>
+                        <a href="#matches" class="text-sm text-primary" style="font-size: 0.8rem;">Ver todos &rarr;</a>
+                    </div>
+                    ${renderMatchCard(nextMatch, teams, 'No hay partidos programados')}
+                </div>
+
+                <!-- Último Partido -->
+                <div class="dashboard-card col-span-6">
+                    <div class="dashboard-card-title">
+                        <span>✅ Último Partido Finalizado</span>
+                        <a href="#matches" class="text-sm text-primary" style="font-size: 0.8rem;">Ver todos &rarr;</a>
+                    </div>
+                    ${renderMatchCard(lastMatch, teams, 'No se ha jugado ningún partido')}
+                </div>
+
+                <!-- Mini Tabla / Resumen Torneo -->
+                <div class="dashboard-card col-span-12">
+                    <div class="dashboard-card-title">
+                        <span>📊 Resumen del Torneo (${league.mode === 'eliminacion' ? 'Eliminación Directa' : (league.mode === 'doble-eliminacion' ? 'Doble Eliminación' : 'Liga Regular')})</span>
+                        <a href="#stats" class="text-sm text-primary">Tabla Completa &rarr;</a>
+                    </div>
+                    ${renderMiniStandings(standings, sportTerm)}
+                </div>
+
+                <!-- Gráfico 1: Puntos a Favor -->
+                <div class="dashboard-card col-span-4">
+                    <div class="dashboard-card-title">${sportTerm.scoreLabelFor} A Favor</div>
+                    <div class="chart-wrapper">
+                        <canvas id="chartPF"></canvas>
+                    </div>
+                </div>
+
+                <!-- Gráfico 2: Resultados Globales -->
+                <div class="dashboard-card col-span-4">
+                    <div class="dashboard-card-title">Distribución de Resultados</div>
+                    <div class="chart-wrapper">
+                        <canvas id="chartResults"></canvas>
+                    </div>
+                </div>
+
+                <!-- Gráfico 3: Puntos Acumulados -->
+                <div class="dashboard-card col-span-4">
+                    <div class="dashboard-card-title">Evolución de Puntos</div>
+                    <div class="chart-wrapper">
+                        <canvas id="chartTimeline"></canvas>
+                    </div>
+                </div>
+
+                <footer class="dashboard-footer">
+                    <p style="margin: 0;">© 2026 SetPoint. Desarrollado por Jose Lopez y Santiago Salas</p>
+                    <div>Estado DB: <span style="color: #10b981; font-weight: 700;">Conectado</span></div>
+                </footer>
             </div>
         </div>
-
-        <div class="dashboard-grid">
-            <!-- Próximo Partido -->
-            <div class="dashboard-card">
-                <div class="dashboard-card-title">Próximo Partido</div>
-                ${renderMatchCard(nextMatch, teams, 'No hay partidos programados')}
-            </div>
-
-            <!-- Último Partido -->
-            <div class="dashboard-card">
-                <div class="dashboard-card-title">Último Partido Finalizado</div>
-                ${renderMatchCard(lastMatch, teams, 'No se ha jugado ningún partido')}
-            </div>
-
-            <!-- Mini Tabla / Resumen Torneo -->
-            <div class="dashboard-card" style="grid-column: span 1 / -1;">
-                <div class="dashboard-card-title">
-                    <span>Resumen del Torneo (${league.mode === 'eliminacion' ? 'Eliminación Directa' : 'Liga'})</span>
-                    <a href="#stats" class="text-sm text-primary">Ver completo &rarr;</a>
-                </div>
-                ${renderMiniStandings(standings, sportTerm)}
-            </div>
-
-            <!-- Gráfico 1: Puntos a Favor -->
-            <div class="dashboard-card">
-                <div class="dashboard-card-title">Anotaciones A Favor (${sportTerm.scoreLabelFor})</div>
-                <div class="chart-wrapper">
-                    <canvas id="chartPF"></canvas>
-                </div>
-            </div>
-
-            <!-- Gráfico 2: Resultados Globales -->
-            <div class="dashboard-card">
-                <div class="dashboard-card-title">Distribución de Resultados</div>
-                <div class="chart-wrapper">
-                    <canvas id="chartResults"></canvas>
-                </div>
-            </div>
-
-            <!-- Gráfico 3: Puntos Acumulados -->
-            <div class="dashboard-card">
-                <div class="dashboard-card-title">Evolución de Puntos</div>
-                <div class="chart-wrapper">
-                    <canvas id="chartTimeline"></canvas>
-                </div>
-            </div>
-            <footer style="margin-top: auto; width: 100%; padding: 1.5rem; border-top: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; background: inherit; box-sizing: border-box;">
-                <p style="margin: 0;">© 2026 SetPoint. Desarrollado por Jose Lopez y Santiago Salas</p>
-                <div>Base de Datos: <span style="color: #10b981;">Conectado</span></div>
-            </footer>
-        </div>
-
     `;
 
     // 2. Inicializar Gráficos con Chart.js
@@ -112,7 +150,7 @@ function renderEmptyState(container, message) {
 }
 
 function renderMatchCard(match, teams, emptyText) {
-    if (!match) return `<p class="text-muted text-sm">${emptyText}</p>`;
+    if (!match) return `<p class="text-muted text-sm" style="margin: 0.5rem 0;">${emptyText}</p>`;
 
     const home = teams.find(t => t.id === match.homeTeamId) || { name: 'Por definir' };
     const away = teams.find(t => t.id === match.awayTeamId) || { name: 'Por definir' };
@@ -122,12 +160,14 @@ function renderMatchCard(match, teams, emptyText) {
         : 'VS';
 
     return `
-        <div class="flex-between align-center">
+        <div class="dash-match-box">
             <div>
-                <strong>${home.name}</strong> vs <strong>${away.name}</strong>
-                <div class="text-xs text-muted">${match.date ? new Date(match.date).toLocaleDateString() : 'Fecha no definida'}</div>
+                <strong style="color: #f8fafc; font-size: 1rem;">${home.name}</strong> 
+                <span style="color: #64748b; margin: 0 0.25rem;">vs</span> 
+                <strong style="color: #f8fafc; font-size: 1rem;">${away.name}</strong>
+                <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 0.35rem;">📅 ${match.date ? new Date(match.date).toLocaleDateString() : 'Fecha no definida'}</div>
             </div>
-            <div class="font-bold text-lg">
+            <div class="dash-score-badge">
                 ${scoreDisplay}
             </div>
         </div>
@@ -141,10 +181,10 @@ function renderMiniStandings(standings, sportTerm) {
 
     const top5 = standings.slice(0, 5);
     return `
-        <table class="table-compact" style="width: 100%;">
+        <table class="dashboard-table">
             <thead>
                 <tr>
-                    <th>#</th>
+                    <th style="width: 40px;">#</th>
                     <th>Equipo</th>
                     <th>PJ</th>
                     <th>${sportTerm.scoreLabelFor}</th>
@@ -152,15 +192,18 @@ function renderMiniStandings(standings, sportTerm) {
                 </tr>
             </thead>
             <tbody>
-                ${top5.map((team, index) => `
-                    <tr>
-                        <td><strong>${index + 1}</strong></td>
-                        <td>${team.name}</td>
-                        <td>${team.stats?.played || 0}</td>
-                        <td>${team.stats?.goalsFor || 0}</td>
-                        <td><strong>${team.stats?.points || 0}</strong></td>
-                    </tr>
-                `).join('')}
+                ${top5.map((team, index) => {
+                    const rankClass = index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : 'rank-default';
+                    return `
+                        <tr>
+                            <td><span class="rank-pill ${rankClass}">${index + 1}</span></td>
+                            <td><strong style="color: #f8fafc;">${team.name}</strong></td>
+                            <td>${team.stats?.played || 0}</td>
+                            <td>${team.stats?.goalsFor || 0}</td>
+                            <td><strong style="color: #10b981; font-size: 0.95rem;">${team.stats?.points || 0}</strong></td>
+                        </tr>
+                    `;
+                }).join('')}
             </tbody>
         </table>
     `;

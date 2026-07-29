@@ -123,9 +123,26 @@ export function deleteTeam(id) {
     });
 }
 
+/**
+ * Obtiene todos los equipos (sin filtro de liga).
+ * @returns {Promise<Array>}
+ */
+export function getAllTeams() {
+    return new Promise((resolve, reject) => {
+        const db = getDB();
+        const tx = db.transaction('teams', 'readonly');
+        const store = tx.objectStore('teams');
+        const request = store.getAll();
+
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => reject(request.error);
+    });
+}
+
 // Compatibilidad objeto
 export const teamsDb = {
     getByLeague: getTeamsByLeague,
+    getAll: getAllTeams,
     getById: getTeamById,
     create: createTeam,
     update: updateTeam,

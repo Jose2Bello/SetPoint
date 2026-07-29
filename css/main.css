@@ -5,6 +5,9 @@
 @import url('utilities.css');
 @import url('animations.css');
 @import url('components/forms.css');
+@import url('views/players.css');
+@import url('views/dashboard.css');
+@import url('views/leagues.css');
 
 /* Themes (active via class on parent) */
 @import url('themes/sport-futbol.css');

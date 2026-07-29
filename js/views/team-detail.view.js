@@ -5,6 +5,7 @@ import { getAllMatches } from '../db/matches.db.js';
 import { getActiveLeague } from '../db/leagues.db.js';
 import { SPORTS } from '../sports-terms.js';
 
+
 export async function renderTeamDetail(container, params) {
     const teamId = Number(params.id);
     container.textContent = '';
@@ -29,11 +30,13 @@ export async function renderTeamDetail(container, params) {
 
     const activeLeague = await getActiveLeague();
     const sportConfig = SPORTS[activeLeague?.sport] || SPORTS.futbol;
+    
+    // Forzamos la carga de jugadores por equipo
     const players = await getPlayersByTeam(teamId);
     const allLeagueMatches = activeLeague ? await getAllMatches(activeLeague.id) : [];
 
     // Partidos específicos del equipo
-    const teamMatches = allLeagueMatches.filter(m => m.homeTeamId === teamId || m.awayTeamId === teamId);
+    const teamMatches = allLeagueMatches.filter(m => Number(m.homeTeamId) === teamId || Number(m.awayTeamId) === teamId);
     const scheduledMatches = teamMatches.filter(m => m.status === 'scheduled');
     const finishedMatches = teamMatches
         .filter(m => m.status === 'finished' || m.status === 'Finalizado')
@@ -43,18 +46,19 @@ export async function renderTeamDetail(container, params) {
     let currentRank = '-';
     if (activeLeague) {
         const teamStatsMap = new Map();
-        // Inicializar mapa con equipos
         const allTeamsMatches = allLeagueMatches.filter(m => m.status === 'finished' || m.status === 'Finalizado');
         
         allTeamsMatches.forEach(m => {
             const hScore = m.homeScore ?? 0;
             const aScore = m.awayScore ?? 0;
+            const homeId = Number(m.homeTeamId);
+            const awayId = Number(m.awayTeamId);
 
-            if (!teamStatsMap.has(m.homeTeamId)) teamStatsMap.set(m.homeTeamId, { points: 0, diff: 0, goalsFor: 0 });
-            if (!teamStatsMap.has(m.awayTeamId)) teamStatsMap.set(m.awayTeamId, { points: 0, diff: 0, goalsFor: 0 });
+            if (!teamStatsMap.has(homeId)) teamStatsMap.set(homeId, { points: 0, diff: 0, goalsFor: 0 });
+            if (!teamStatsMap.has(awayId)) teamStatsMap.set(awayId, { points: 0, diff: 0, goalsFor: 0 });
 
-            const hStats = teamStatsMap.get(m.homeTeamId);
-            const aStats = teamStatsMap.get(m.awayTeamId);
+            const hStats = teamStatsMap.get(homeId);
+            const aStats = teamStatsMap.get(awayId);
 
             hStats.goalsFor += hScore;
             hStats.diff += (hScore - aScore);
@@ -77,7 +81,8 @@ export async function renderTeamDetail(container, params) {
             return b[1].goalsFor - a[1].goalsFor;
         });
 
-        const rankIndex = sortedTeams.findIndex(([id]) => id === teamId);
+        // Aseguramos comparación numérica para obtener el puesto
+        const rankIndex = sortedTeams.findIndex(([id]) => Number(id) === teamId);
         if (rankIndex !== -1) currentRank = `#${rankIndex + 1}`;
     }
 
@@ -94,7 +99,7 @@ export async function renderTeamDetail(container, params) {
     container.appendChild(backNav);
 
     // ==========================================
-    // 4.4.1 CABECERA DEL EQUIPO
+    // CABECERA DEL EQUIPO
     // ==========================================
     const headerPanel = document.createElement('div');
     headerPanel.className = 'team-detail-header glass-panel';
@@ -173,13 +178,13 @@ export async function renderTeamDetail(container, params) {
     statsGrid.appendChild(createStatItem('PP', stats.lost));
     statsGrid.appendChild(createStatItem('PF', stats.goalsFor));
     statsGrid.appendChild(createStatItem('PC', stats.goalsAgainst));
-    statsGrid.appendChild(createStatItem('DIF', stats.goalsDiff > 0 ? `+${stats.goalsDiff}` : stats.goalsDiff));
+    statsGrid.appendChild(createStatItem('DIF', (stats.goalsDiff > 0 ? `+${stats.goalsDiff}` : stats.goalsDiff) || 0));
 
     headerPanel.appendChild(statsGrid);
     container.appendChild(headerPanel);
 
     // ==========================================
-    // 4.4.5 MINI GRÁFICO DEL EQUIPO
+    // MINI GRÁFICO DEL EQUIPO
     // ==========================================
     const graphSection = document.createElement('div');
     graphSection.className = 'glass-panel section-container';
@@ -195,11 +200,10 @@ export async function renderTeamDetail(container, params) {
     graphSection.appendChild(canvasContainer);
     container.appendChild(graphSection);
 
-    // Dibuja el gráfico en Canvas (sin librerías externas)
     setTimeout(() => renderPointsChart(canvas, finishedMatches, teamId), 50);
 
     // ==========================================
-    // 4.4.2 PLANTILLA
+    // PLANTILLA DE JUGADORES
     // ==========================================
     const squadSection = document.createElement('div');
     squadSection.className = 'glass-panel section-container';
@@ -207,7 +211,7 @@ export async function renderTeamDetail(container, params) {
     const squadHeader = document.createElement('div');
     squadHeader.className = 'section-header-flex';
     const h2Squad = document.createElement('h2');
-    h2Squad.textContent = 'Plantilla de Jugadores';
+    h2Squad.textContent = `Plantilla de Jugadores (${players.length})`;
     const btnAddPlayer = document.createElement('button');
     btnAddPlayer.className = 'btn btn-primary';
     btnAddPlayer.textContent = '+ Agregar Jugador';
@@ -225,21 +229,38 @@ export async function renderTeamDetail(container, params) {
         playersGrid.appendChild(emptyP);
     } else {
         players.forEach(p => {
-            const card = document.createElement('player-card');
-            card.setAttribute('player-id', p.id);
-            card.setAttribute('name', p.name);
-            card.setAttribute('position', p.position);
-            card.setAttribute('number', p.number);
-            card.setAttribute('team-name', team.name);
-            if (p.photo) card.setAttribute('photo', p.photo);
-            playersGrid.appendChild(card);
+            // Intentamos usar custom element y si no, renderizamos tarjeta HTML estándar de respaldo
+            if (customElements.get('player-card')) {
+                const card = document.createElement('player-card');
+                card.setAttribute('player-id', p.id);
+                card.setAttribute('name', p.name);
+                card.setAttribute('position', p.position);
+                card.setAttribute('number', p.number);
+                card.setAttribute('team-name', team.name);
+                if (p.photo) card.setAttribute('photo', p.photo);
+                playersGrid.appendChild(card);
+            } else {
+                const fallbackCard = document.createElement('div');
+                fallbackCard.className = 'glass-panel player-card-fallback';
+                fallbackCard.style.cssText = 'padding: 1rem; border-radius: 8px; display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;';
+                fallbackCard.innerHTML = `
+                    <div style="background: #3b82f6; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                        #${p.number}
+                    </div>
+                    <div>
+                        <strong style="display: block; color: #f8fafc;">${p.name}</strong>
+                        <span class="text-muted" style="font-size: 0.85rem;">${p.position || 'Sin posición'}</span>
+                    </div>
+                `;
+                playersGrid.appendChild(fallbackCard);
+            }
         });
     }
     squadSection.appendChild(playersGrid);
     container.appendChild(squadSection);
 
     // ==========================================
-    // 4.4.3 PRÓXIMOS PARTIDOS
+    // PRÓXIMOS PARTIDOS
     // ==========================================
     const nextMatchesSection = document.createElement('div');
     nextMatchesSection.className = 'glass-panel section-container';
@@ -256,7 +277,7 @@ export async function renderTeamDetail(container, params) {
         const listNext = document.createElement('div');
         listNext.className = 'matches-list';
         scheduledMatches.forEach(m => {
-            const isHome = m.homeTeamId === teamId;
+            const isHome = Number(m.homeTeamId) === teamId;
             const rivalId = isHome ? m.awayTeamId : m.homeTeamId;
             const matchCard = document.createElement('a');
             matchCard.href = `#match/${m.id}`;
@@ -279,7 +300,7 @@ export async function renderTeamDetail(container, params) {
     container.appendChild(nextMatchesSection);
 
     // ==========================================
-    // 4.4.4 PARTIDOS JUGADOS
+    // PARTIDOS JUGADOS
     // ==========================================
     const playedMatchesSection = document.createElement('div');
     playedMatchesSection.className = 'glass-panel section-container';
@@ -297,7 +318,7 @@ export async function renderTeamDetail(container, params) {
         listPlayed.className = 'matches-list';
 
         finishedMatches.forEach(m => {
-            const isHome = m.homeTeamId === teamId;
+            const isHome = Number(m.homeTeamId) === teamId;
             const myScore = isHome ? (m.homeScore ?? 0) : (m.awayScore ?? 0);
             const rivalScore = isHome ? (m.awayScore ?? 0) : (m.homeScore ?? 0);
             const rivalId = isHome ? m.awayTeamId : m.homeTeamId;
@@ -330,7 +351,7 @@ export async function renderTeamDetail(container, params) {
     container.appendChild(playedMatchesSection);
 
     // ==========================================
-    // MODAL DE CREACIÓN DE JUGADOR (PRE-ASIGNADO)
+    // MODAL AGREGAR JUGADOR
     // ==========================================
     const modal = document.createElement('div');
     modal.className = 'modal hidden';
@@ -375,7 +396,7 @@ export async function renderTeamDetail(container, params) {
         const formData = new FormData(e.target);
         
         const newPlayer = {
-            teamId: teamId,
+            teamId: Number(teamId),
             name: formData.get('name'),
             photo: formData.get('photo'),
             position: formData.get('position'),
@@ -385,29 +406,27 @@ export async function renderTeamDetail(container, params) {
         try {
             await createPlayer(newPlayer);
             modal.classList.add('hidden');
-            window.location.reload();
+            
+            // Re-renderizamos la vista en lugar de reload completo para mayor rapidez
+            renderTeamDetail(container, params);
         } catch (err) {
-            alert('Error al registrar jugador: ' + err.message);
+            alert(err.message || 'Error al registrar jugador');
         }
     });
 }
 
-/**
- * Dibuja un mini gráfico canvas de línea pura con la evolución acumulada de puntos.
- */
 function renderPointsChart(canvas, finishedMatches, teamId) {
     const ctx = canvas.getContext('2d');
     const width = canvas.width = canvas.parentElement.clientWidth || 600;
     const height = canvas.height = 200;
 
-    // Ordenar cronológicamente
     const chronologicalMatches = [...finishedMatches].reverse();
     
     let currentPoints = 0;
-    const dataPoints = [0]; // Empieza en 0 puntos
+    const dataPoints = [0];
 
     chronologicalMatches.forEach(m => {
-        const isHome = m.homeTeamId === teamId;
+        const isHome = Number(m.homeTeamId) === teamId;
         const myScore = isHome ? (m.homeScore ?? 0) : (m.awayScore ?? 0);
         const rivalScore = isHome ? (m.awayScore ?? 0) : (m.homeScore ?? 0);
 
@@ -431,7 +450,6 @@ function renderPointsChart(canvas, finishedMatches, teamId) {
 
     ctx.clearRect(0, 0, width, height);
 
-    // Dibujar Guías de Fondo
     ctx.strokeStyle = '#334155';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -439,7 +457,6 @@ function renderPointsChart(canvas, finishedMatches, teamId) {
     ctx.lineTo(width - padding, height - padding);
     ctx.stroke();
 
-    // Dibujar Línea de Evolución
     ctx.strokeStyle = '#3b82f6';
     ctx.lineWidth = 3;
     ctx.beginPath();
@@ -452,7 +469,6 @@ function renderPointsChart(canvas, finishedMatches, teamId) {
     });
     ctx.stroke();
 
-    // Dibujar Puntos y Etiquetas
     dataPoints.forEach((pts, i) => {
         const x = padding + i * stepX;
         const y = (height - padding) - (pts / maxVal) * (height - padding * 2);

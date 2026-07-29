@@ -1,6 +1,7 @@
-import { getPlayerById } from '../db/players.db.js';
-import { getTeamById } from '../db/teams.db.js';
-import { getEventsByPlayer } from '../db/events.db.js';
+
+import { playersDb } from '../db/players.db.js';
+import { teamsDb } from '../db/teams.db.js'; 
+import { getEventsByPlayer } from '../db/events.db.js'; 
 import { getActiveLeague } from '../db/leagues.db.js';
 import { SPORTS } from '../sports-terms.js';
 
@@ -11,7 +12,7 @@ export async function renderPlayerDetail(container, params) {
     loading.setAttribute('message', 'Cargando perfil del jugador...');
     container.appendChild(loading);
 
-    const player = await getPlayerById(playerId);
+    const player = await playersDb.getById(playerId); 
     if (!player) {
         container.textContent = '';
         const h2 = document.createElement('h2');
@@ -25,7 +26,7 @@ export async function renderPlayerDetail(container, params) {
         return;
     }
 
-    const team = await getTeamById(player.teamId);
+    const team = await teamsDb.getById(player.teamId); 
     const activeLeague = await getActiveLeague();
     const sportConfig = SPORTS[activeLeague?.sport] || SPORTS.futbol;
     const events = await getEventsByPlayer(playerId);
