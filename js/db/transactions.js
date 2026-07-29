@@ -168,10 +168,10 @@ export function finalizeMatch(matchId, eventsList, manualWinnerId = null) {
             } else if (awayScore > homeScore) {
                 winnerTeamId = match.awayTeamId;
             } else {
-                if (league.mode === 'eliminacion') {
+                if (league.mode === 'eliminacion' || league.mode === 'doble-eliminacion') {
                     if (!manualWinnerId) {
                         tx.abort();
-                        reject(new Error('En llaves de eliminación directa no se permiten empates. Debe declarar un ganador.'));
+                        reject(new Error('En llaves de eliminación no se permiten empates. Debe declarar un ganador.'));
                         return;
                     }
                     winnerTeamId = Number(manualWinnerId);
@@ -254,7 +254,7 @@ export function finalizeMatch(matchId, eventsList, manualWinnerId = null) {
                 };
             }
             
-            if (league.mode === 'eliminacion' && match.nextMatchId) {
+            if ((league.mode === 'eliminacion' || league.mode === 'doble-eliminacion') && match.nextMatchId) {
                 const nextMatchId = Number(match.nextMatchId);
                 matchesStore.get(nextMatchId).onsuccess = (ne) => {
                     const nextMatch = ne.target.result;
@@ -267,6 +267,24 @@ export function finalizeMatch(matchId, eventsList, manualWinnerId = null) {
                         matchesStore.put(nextMatch);
                     }
                 };
+            }
+
+            if (league.mode === 'doble-eliminacion' && match.loserNextMatchId) {
+                const loserNextMatchId = Number(match.loserNextMatchId);
+                const loserTeamId = (winnerTeamId === match.homeTeamId) ? match.awayTeamId : match.homeTeamId;
+                if (loserTeamId) {
+                    matchesStore.get(loserNextMatchId).onsuccess = (le) => {
+                        const loserMatch = le.target.result;
+                        if (loserMatch) {
+                            if (match.loserNextMatchHomeSlot) {
+                                loserMatch.homeTeamId = loserTeamId;
+                            } else {
+                                loserMatch.awayTeamId = loserTeamId;
+                            }
+                            matchesStore.put(loserMatch);
+                        }
+                    };
+                }
             }
         }
         
@@ -314,16 +332,33 @@ export function undoMatch(matchId) {
             tx.objectStore('leagues').get(match.leagueId).onsuccess = (le) => {
                 league = le.target.result;
                 
-                if (league.mode === 'eliminacion' && match.nextMatchId) {
-                    matchesStore.get(Number(match.nextMatchId)).onsuccess = (ne) => {
-                        const nextMatch = ne.target.result;
-                        if (nextMatch && nextMatch.status === 'Finalizado') {
-                            tx.abort();
-                            reject(new Error('No se puede deshacer un partido si el partido de la siguiente ronda ya está finalizado. Deshaz el siguiente partido primero.'));
-                            return;
-                        }
-                        fetchEventsAndRevert();
-                    };
+                const nextId = match.nextMatchId ? Number(match.nextMatchId) : null;
+                const loserNextId = match.loserNextMatchId ? Number(match.loserNextMatchId) : null;
+
+                const checkFinalized = [];
+                if (nextId) checkFinalized.push(nextId);
+                if (loserNextId) checkFinalized.push(loserNextId);
+
+                if ((league.mode === 'eliminacion' || league.mode === 'doble-eliminacion') && checkFinalized.length > 0) {
+                    let checkedCount = 0;
+                    let hasFinalizedNext = false;
+                    checkFinalized.forEach(nid => {
+                        matchesStore.get(nid).onsuccess = (ne) => {
+                            const nextMatch = ne.target.result;
+                            if (nextMatch && nextMatch.status === 'Finalizado') {
+                                hasFinalizedNext = true;
+                            }
+                            checkedCount++;
+                            if (checkedCount === checkFinalized.length) {
+                                if (hasFinalizedNext) {
+                                    tx.abort();
+                                    reject(new Error('No se puede deshacer un partido si el partido de la siguiente ronda ya está finalizado. Deshaz el siguiente partido primero.'));
+                                    return;
+                                }
+                                fetchEventsAndRevert();
+                            }
+                        };
+                    });
                 } else {
                     fetchEventsAndRevert();
                 }
@@ -341,7 +376,7 @@ export function undoMatch(matchId) {
             const homeScore = match.score.home;
             const awayScore = match.score.away;
             
-            if (league.mode === 'eliminacion' && match.nextMatchId) {
+            if ((league.mode === 'eliminacion' || league.mode === 'doble-eliminacion') && match.nextMatchId) {
                 const nextMatchId = Number(match.nextMatchId);
                 matchesStore.get(nextMatchId).onsuccess = (ne) => {
                     const nextMatch = ne.target.result;
@@ -352,6 +387,21 @@ export function undoMatch(matchId) {
                             nextMatch.awayTeamId = null;
                         }
                         matchesStore.put(nextMatch);
+                    }
+                };
+            }
+
+            if (league.mode === 'doble-eliminacion' && match.loserNextMatchId) {
+                const loserNextMatchId = Number(match.loserNextMatchId);
+                matchesStore.get(loserNextMatchId).onsuccess = (le) => {
+                    const loserMatch = le.target.result;
+                    if (loserMatch) {
+                        if (match.loserNextMatchHomeSlot) {
+                            loserMatch.homeTeamId = null;
+                        } else {
+                            loserMatch.awayTeamId = null;
+                        }
+                        matchesStore.put(loserMatch);
                     }
                 };
             }

@@ -1,7 +1,12 @@
 import { teamsDb } from '../db/teams.db.js';
 import { playersDb } from '../db/players.db.js';
 import { matchesDb } from '../db/matches.db.js';
+import { leaguesDb } from '../db/leagues.db.js';
 import { storage } from '../utils/storage.js';
+import { SPORTS } from '../sports-terms.js';
+
+// Obtenemos las claves directamente del objeto SPORTS
+const SPORT_KEYS = Object.keys(SPORTS || {});
 
 const DEFAULT_SHIELD = 'assets/no-image.webp';
 const UPLOAD_ICON = 'assets/upload-icon.png';
@@ -24,6 +29,7 @@ export async function renderTeams(container) {
         return;
     }
 
+    const activeLeague = await leaguesDb.getById(activeLeagueId);
     const teams = await teamsDb.getByLeague(activeLeagueId);
     
     const teamsWithPlayerCount = await Promise.all(teams.map(async (team) => {
@@ -31,37 +37,75 @@ export async function renderTeams(container) {
         return { ...team, playerCount: players.length };
     }));
 
-    renderListView(container, teamsWithPlayerCount, activeLeagueId);
+    const initialSportFilter = activeLeague?.sport || SPORT_KEYS[0] || 'futbol';
+
+    renderListView(container, teamsWithPlayerCount, activeLeagueId, initialSportFilter);
 }
 
-function renderListView(container, teams, activeLeagueId) {
-    container.innerHTML = `
-        <div class="teams-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
-            <div>
-                <h1 class="text-2xl font-bold">Gestión de Equipos</h1>
-                <p class="text-sm text-muted">Administra los clubes de la liga activa</p>
-            </div>
-            <button id="btnNewTeam" class="btn btn-primary text-sm">+ Nuevo Equipo</button>
-        </div>
+function renderListView(container, teams, activeLeagueId, initialSportFilter) {
+    let currentSportFilter = initialSportFilter;
 
-        ${teams.length === 0 ? `
-            <div class="glass-card text-center" style="padding: 3rem 1.5rem;">
-                <h2 class="text-xl font-bold mb-2">No hay equipos registrados</h2>
-                <p class="text-secondary mb-4">Comienza registrando los equipos participantes en esta liga.</p>
-                <button id="btnNewTeamEmpty" class="btn btn-primary">Registrar Primer Equipo</button>
-            </div>
-        ` : `
-            <div class="teams-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.5rem;">
-                ${teams.map(team => renderTeamCard(team)).join('')}
-            </div>
-        `}
-    `;
+    const render = () => {
+        const filteredTeams = teams.filter(t => (t.sport || 'futbol') === currentSportFilter);
 
-    setupListEventListeners(container, activeLeagueId);
+        container.innerHTML = `
+            <div class="teams-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+                <div>
+                    <h1 class="text-2xl font-bold">Gestión de Equipos</h1>
+                    <p class="text-sm text-muted">Administra los clubes organizados por disciplina deportiva</p>
+                </div>
+                <button id="btnNewTeam" class="btn btn-primary text-sm">+ Nuevo Equipo</button>
+            </div>
+
+            <!-- NAVEGACIÓN POR PESTAÑAS (DEPORTES) -->
+            <div class="sports-tabs-bar" style="display: flex; gap: 0.5rem; overflow-x: auto; margin-bottom: 1.5rem; padding-bottom: 0.5rem;">
+                ${SPORT_KEYS.map(key => {
+                    const sportData = SPORTS[key] || { name: key, icon: '🏆' };
+                    const count = teams.filter(t => (t.sport || 'futbol') === key).length;
+                    const isActive = key === currentSportFilter;
+
+                    return `
+                        <button type="button" class="tab-btn ${isActive ? 'active' : ''}" data-sport="${key}" style="
+                            display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1rem; border-radius: 8px;
+                            border: none; cursor: pointer; font-weight: 500; white-space: nowrap; transition: all 0.2s ease;
+                            background: ${isActive ? '#3b82f6' : 'rgba(255, 255, 255, 0.05)'};
+                            color: ${isActive ? '#ffffff' : '#94a3b8'};
+                        ">
+                            <span>${sportData.icon || '🏆'}</span>
+                            <span>${sportData.name || key}</span>
+                            <span style="
+                                background: ${isActive ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)'};
+                                padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.75rem;
+                            ">${count}</span>
+                        </button>
+                    `;
+                }).join('')}
+            </div>
+
+            ${filteredTeams.length === 0 ? `
+                <div class="glass-card text-center" style="padding: 3rem 1.5rem;">
+                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">${SPORTS[currentSportFilter]?.icon || '🛡️'}</div>
+                    <h2 class="text-xl font-bold mb-2">No hay equipos de ${SPORTS[currentSportFilter]?.name || 'este deporte'}</h2>
+                    <p class="text-secondary mb-4">Comienza registrando los equipos participantes en esta disciplina.</p>
+                    <button id="btnNewTeamEmpty" class="btn btn-primary">Registrar Primer Equipo</button>
+                </div>
+            ` : `
+                <div class="teams-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.5rem;">
+                    ${filteredTeams.map(team => renderTeamCard(team)).join('')}
+                </div>
+            `}
+        `;
+
+        setupListEventListeners(container, activeLeagueId, currentSportFilter, (newSport) => {
+            currentSportFilter = newSport;
+            render();
+        });
+    };
+
+    render();
 }
 
 function renderTeamCard(team) {
-    // 🔍 Auditoría individual por tarjeta en consola
     console.log(`Tarjeta de [${team.name}] - Logo recibido de BD:`, team.logo ? team.logo.substring(0, 30) + '...' : 'VACÍO O INDEFINIDO');
 
     const shieldUrl = (team.logo && team.logo.trim() !== '') ? team.logo : DEFAULT_SHIELD;
@@ -94,11 +138,17 @@ function renderTeamCard(team) {
     `;
 }
 
-
-function setupListEventListeners(container, activeLeagueId) {
-    const goForm = () => renderFormView(container, activeLeagueId);
+function setupListEventListeners(container, activeLeagueId, currentSportFilter, onTabChange) {
+    const goForm = () => renderFormView(container, activeLeagueId, null, currentSportFilter);
     container.querySelector('#btnNewTeam')?.addEventListener('click', goForm);
     container.querySelector('#btnNewTeamEmpty')?.addEventListener('click', goForm);
+
+    container.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const selectedSport = e.currentTarget.dataset.sport;
+            if (selectedSport) onTabChange(selectedSport);
+        });
+    });
 
     container.addEventListener('click', async (e) => {
         const id = Number(e.target.dataset.id);
@@ -106,7 +156,7 @@ function setupListEventListeners(container, activeLeagueId) {
 
         if (e.target.classList.contains('btn-edit-team')) {
             const team = await teamsDb.getById(id);
-            if (team) renderFormView(container, activeLeagueId, team);
+            if (team) renderFormView(container, activeLeagueId, team, currentSportFilter);
         } else if (e.target.classList.contains('btn-delete-team')) {
             const leagueMatches = await matchesDb.getByLeague(activeLeagueId);
             const hasMatches = leagueMatches.some(m => m.homeTeamId === id || m.awayTeamId === id);
@@ -128,9 +178,10 @@ function setupListEventListeners(container, activeLeagueId) {
     });
 }
 
-function renderFormView(container, leagueId, teamToEdit = null) {
+function renderFormView(container, leagueId, teamToEdit = null, defaultSport = 'futbol') {
     const isEdit = !!teamToEdit;
     let processedImageBase64 = teamToEdit?.logo || '';
+    const selectedSport = teamToEdit?.sport || defaultSport;
 
     container.innerHTML = `
       <div class="team-form-card" style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 1.5rem; max-width: 600px; margin: 0 auto 100px auto;">
@@ -162,6 +213,17 @@ function renderFormView(container, leagueId, teamToEdit = null) {
                     </div>
 
                     <div class="form-group">
+                        <label class="label text-sm">Disciplina Deportiva</label>
+                        <select name="sport" class="input" required style="width: 100%; box-sizing: border-box;">
+                            ${SPORT_KEYS.map(key => `
+                                <option value="${key}" ${key === selectedSport ? 'selected' : ''}>
+                                    ${SPORTS[key]?.icon || '🏆'} ${SPORTS[key]?.name || key}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
                         <label class="label text-sm">Ciudad / Sede (Opcional)</label>
                         <input type="text" name="city" class="input" value="${teamToEdit?.city || ''}" placeholder="Ej. Madrid" style="width: 100%; box-sizing: border-box;">
                     </div>
@@ -187,11 +249,9 @@ function renderFormView(container, leagueId, teamToEdit = null) {
         </div>
     `;
 
-    // Procesamiento optimizado de la imagen con Canvas
-   const fileInput = container.querySelector('#shieldFileInput');
+    const fileInput = container.querySelector('#shieldFileInput');
     const previewImg = container.querySelector('#shieldPreview');
 
-    // 1. Cargamos la imagen al Canvas y actualizamos el DOM directamente
     fileInput?.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -206,7 +266,6 @@ function renderFormView(container, leagueId, teamToEdit = null) {
                 canvas.height = 150;
                 ctx.drawImage(img, 0, 0, 150, 150);
                 
-                // Inyectamos el base64 directamente en la etiqueta <img> (formato WebP es más ligero)
                 previewImg.src = canvas.toDataURL('image/webp', 0.85);
             };
             img.src = event.target.result;
@@ -218,17 +277,17 @@ function renderFormView(container, leagueId, teamToEdit = null) {
     container.querySelector('#btnBackToList')?.addEventListener('click', goBack);
     container.querySelector('#btnCancelForm')?.addEventListener('click', goBack);
 
-container.querySelector('#teamForm').onsubmit = async (e) => {
+    container.querySelector('#teamForm').onsubmit = async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
         
         const currentPreviewSrc = previewImg.src;
         const finalLogo = currentPreviewSrc.includes('no-image') ? '' : currentPreviewSrc;
 
-        
         const teamData = {
             leagueId: Number(leagueId),
             name: formData.get('name').trim(),
+            sport: formData.get('sport'),
             city: formData.get('city').trim(),
             primaryColor: formData.get('primaryColor'),
             secondaryColor: formData.get('secondaryColor'),
@@ -246,7 +305,6 @@ container.querySelector('#teamForm').onsubmit = async (e) => {
         if (isEdit) {
             await teamsDb.update(teamToEdit.id, teamData);
         } else {
-            // Revisa si tu método teamsDb.create() recibe y guarda este objeto tal cual
             await teamsDb.create(teamData);
         }
 

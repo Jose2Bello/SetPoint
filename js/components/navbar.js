@@ -1,6 +1,8 @@
+/* js/components/navbar.js */
 import { storage } from '../utils/storage.js';
 import { leaguesDb } from '../db/leagues.db.js';
 import { SPORTS } from '../sports-terms.js';
+import { initDB } from '../db/connection.js'; 
 
 class LeagueNavbar extends HTMLElement {
     constructor() {
@@ -9,9 +11,12 @@ class LeagueNavbar extends HTMLElement {
     }
 
     connectedCallback() {
-        this.render();
+        
+        this.render().catch(err => console.error('Error renderizando navbar:', err));
     
-        this._boundHandleLeagueActivation = () => this.render();
+        this._boundHandleLeagueActivation = () => {
+            this.render().catch(err => console.error('Error al actualizar navbar por liga activada:', err));
+        };
         window.addEventListener('league-activated', this._boundHandleLeagueActivation);
     }
 
@@ -33,6 +38,12 @@ class LeagueNavbar extends HTMLElement {
     }
 
     async render() {
+        try {
+            await initDB();
+        } catch (e) {
+            console.warn('La base de datos aún no está disponible para Navbar');
+        }
+
         const activeLeagueId = storage.getActiveLeagueId();
         let leagueInfo = 'Ninguna Liga Activa';
         let sportConfig = null;
@@ -46,7 +57,7 @@ class LeagueNavbar extends HTMLElement {
                     leagueInfo = `${sportIcon} ${league.name} (${league.season})`;
                 }
             } catch (e) {
-                console.error(e);
+                console.error('Error al obtener datos de la liga activa en Navbar:', e);
             }
         }
 
@@ -70,6 +81,7 @@ class LeagueNavbar extends HTMLElement {
                 <a href="#stats" class="${this.activeRoute === 'stats' ? 'active' : ''}">Estadísticas</a>
             </nav>
 
+            <!-- 3. Información de Liga Activa (Derecha) -->
             <div class="nav-league-info text-secondary font-medium">
                 ${leagueInfo}
             </div>
@@ -78,4 +90,4 @@ class LeagueNavbar extends HTMLElement {
     }
 }
 
-customElements.define('league-navbar', LeagueNavbar)
+customElements.define('league-navbar', LeagueNavbar);

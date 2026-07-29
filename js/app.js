@@ -4,11 +4,11 @@ import { router } from './router.js';
 import { storage } from './utils/storage.js';
 import { leaguesDb } from './db/leagues.db.js';
 
-import './components/navbar.js';
-import './components/footer.js';
+// Requerimos componentes de estado simple primero
 import './components/loading-state.js';
 import './components/confirm-dialog.js';
 import './components/toast.js';
+import './components/footer.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Set Visual Theme Class (Dark mode is default)
@@ -16,8 +16,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.body.classList.add(theme === 'light' ? 'light-theme' : 'dark-theme');
     
     try {
-        // 2. Initialize Database connection
+        // 2. Initialize Database connection FIRST
         await initDB();
+        
+        // Carga diferida del Navbar tras garantizar la conexión a la base de datos
+        await import('./components/navbar.js');
         
         // Dispatch success status to database status badges
         window.dispatchEvent(new CustomEvent('db-status-change', { detail: 'connected' }));

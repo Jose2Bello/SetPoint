@@ -1,9 +1,10 @@
 import { leaguesDb } from '../db/leagues.db.js';
-import { teamsDb } from '../db/teams.db.js';
+import { teamsDb, createTeam, updateTeam, getAllTeams } from '../db/teams.db.js';
 import { playersDb } from '../db/players.db.js';
 import { matchesDb } from '../db/matches.db.js';
 import { eventsDb } from '../db/events.db.js';
 import { transactions } from '../db/transactions.js';
+import { bracketService } from '../services/bracket.service.js';
 import { storage } from '../utils/storage.js';
 import { getSportConfig } from '../sports-terms.js';
 
@@ -11,7 +12,6 @@ export async function renderLeagues(container) {
     const leagues = await leaguesDb.getAll();
     const activeLeagueId = storage.getActiveLeagueId();
 
-    // Renderizado Vista Principal (Listado)
     renderListView(container, leagues, activeLeagueId);
 }
 
@@ -19,8 +19,8 @@ function renderListView(container, leagues, activeLeagueId) {
     container.innerHTML = `
         <div class="leagues-header">
             <div>
-                <h1 class="text-2xl font-bold">Gestión de Ligas</h1>
-                <p class="text-sm text-muted">Crea, activa o administra tus torneos deportivos</p>
+                <h1>Gestión de Ligas</h1>
+                <p class="text-sm text-muted" style="margin: 0.25rem 0 0 0;">Crea, activa o administra tus torneos y brackets deportivos</p>
             </div>
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                 <label class="btn btn-secondary text-sm" style="cursor: pointer;">
@@ -50,8 +50,10 @@ function renderListView(container, leagues, activeLeagueId) {
 function renderLeagueCard(league, isActive) {
     const sport = getSportConfig(league.sport);
     const modeLabel = league.mode === 'eliminacion' 
-        ? `Eliminación Directa (${league.bracketTeamsCount} equipos)` 
-        : `Liga Regular (${league.rounds || 1} vuelta/s)`;
+        ? `Eliminación Directa (${league.bracketTeamsCount || 8} equipos)` 
+        : league.mode === 'doble-eliminacion'
+            ? `Doble Eliminación (${league.bracketTeamsCount || 8} equipos)`
+            : `Liga Regular (${league.rounds || 1} vuelta/s)`;
 
     return `
         <div class="league-card ${isActive ? 'is-active' : ''}">
@@ -61,12 +63,13 @@ function renderLeagueCard(league, isActive) {
                     ${sport.icon} ${sport.name}
                 </div>
                 <h3 class="text-xl font-bold mb-1">${league.name}</h3>
-                <p class="text-xs text-muted mb-2">Temporada: ${league.season || 'N/A'} | ${modeLabel}</p>
+                <p class="text-xs text-muted mb-2">Temporada: <strong>${league.season || 'N/A'}</strong> | ${modeLabel}</p>
                 ${league.description ? `<p class="text-sm text-secondary mb-3">${league.description}</p>` : ''}
             </div>
 
             <div class="league-actions">
-                ${!isActive ? `<button class="btn btn-sm btn-primary btn-activate" data-id="${league.id}">Activar</button>` : ''}
+                <button class="btn btn-sm btn-primary btn-manage" data-id="${league.id}">⚙️ Administrar</button>
+                ${!isActive ? `<button class="btn btn-sm btn-secondary btn-activate" data-id="${league.id}">Activar</button>` : ''}
                 <button class="btn btn-sm btn-secondary btn-edit" data-id="${league.id}">Editar</button>
                 <button class="btn btn-sm btn-secondary btn-export" data-id="${league.id}">Exportar</button>
                 <button class="btn btn-sm btn-danger btn-delete" data-id="${league.id}">Eliminar</button>
@@ -76,17 +79,17 @@ function renderLeagueCard(league, isActive) {
 }
 
 function setupListEventListeners(container) {
-    // Ir al formulario de Nueva Liga
     const goForm = () => renderFormView(container);
     container.querySelector('#btnNewLeague')?.addEventListener('click', goForm);
     container.querySelector('#btnNewLeagueEmpty')?.addEventListener('click', goForm);
 
-    // Acciones de tarjetas
     container.addEventListener('click', async (e) => {
         const id = Number(e.target.dataset.id);
         if (!id) return;
 
-        if (e.target.classList.contains('btn-activate')) {
+        if (e.target.classList.contains('btn-manage')) {
+            renderLeagueDetailView(container, id);
+        } else if (e.target.classList.contains('btn-activate')) {
             await transactions.activateLeague(id);
             storage.setActiveLeagueId(id);
             renderLeagues(container);
@@ -106,7 +109,6 @@ function setupListEventListeners(container) {
         }
     });
 
-    // Importar JSON
     const importInput = container.querySelector('#importJsonInput');
     importInput?.addEventListener('change', async (e) => {
         const file = e.target.files[0];
@@ -127,6 +129,718 @@ function setupListEventListeners(container) {
     });
 }
 
+/**
+ * Vista de Administración y Detalle de Liga (Inscripciones + Bracket)
+ */
+async function renderLeagueDetailView(container, leagueId, activeTab = 'bracket') {
+    const league = await leaguesDb.getById(leagueId);
+    if (!league) {
+        renderLeagues(container);
+        return;
+    }
+
+    const sport = getSportConfig(league.sport);
+    const teams = await teamsDb.getByLeague(leagueId);
+    const matches = await matchesDb.getByLeague(leagueId);
+
+    const isElimination = league.mode === 'eliminacion' || league.mode === 'doble-eliminacion';
+    const modeLabel = league.mode === 'eliminacion' ? 'Eliminación Directa' : (league.mode === 'doble-eliminacion' ? 'Doble Eliminación' : 'Liga Regular');
+
+    container.innerHTML = `
+        <div class="league-detail-header">
+            <div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                    <span class="dashboard-badge">${sport.icon} ${sport.name}</span>
+                    <span style="font-size: 0.8rem; color: #94a3b8;">${modeLabel}</span>
+                </div>
+                <h1 style="margin: 0; font-size: 1.75rem; color: #f8fafc;">${league.name}</h1>
+                <p class="text-sm text-muted" style="margin: 0.25rem 0 0 0;">Temporada: ${league.season || 'N/A'}</p>
+            </div>
+            <button id="btnBackToLeagues" class="btn btn-secondary text-sm">&larr; Volver a Ligas</button>
+        </div>
+
+        <div class="league-nav-tabs">
+            <button class="tab-btn ${activeTab === 'bracket' ? 'active' : ''}" id="tabBracketBtn">
+                ${isElimination ? '🏆 Cuadro de Eliminación' : '📅 Partidos'}
+            </button>
+            <button class="tab-btn ${activeTab === 'entries' ? 'active' : ''}" id="tabEntriesBtn">
+                🛡️ Inscripciones (${teams.length})
+            </button>
+        </div>
+
+        <div id="leagueTabContent"></div>
+    `;
+
+    container.querySelector('#btnBackToLeagues').addEventListener('click', () => renderLeagues(container));
+
+    const tabContent = container.querySelector('#leagueTabContent');
+    const tabBracketBtn = container.querySelector('#tabBracketBtn');
+    const tabEntriesBtn = container.querySelector('#tabEntriesBtn');
+
+    const refreshBracket = () => renderLeagueDetailView(container, leagueId, 'bracket');
+    const refreshEntries = () => renderLeagueDetailView(container, leagueId, 'entries');
+
+    tabBracketBtn.addEventListener('click', () => {
+        tabBracketBtn.classList.add('active');
+        tabEntriesBtn.classList.remove('active');
+        if (isElimination) {
+            renderBracketTab(tabContent, league, teams, matches, refreshBracket);
+        } else {
+            renderLeagueMatchesTab(tabContent, league, teams, matches, refreshBracket);
+        }
+    });
+
+    tabEntriesBtn.addEventListener('click', () => {
+        tabEntriesBtn.classList.add('active');
+        tabBracketBtn.classList.remove('active');
+        renderEntriesTab(tabContent, league, teams, refreshEntries);
+    });
+
+    if (activeTab === 'entries') {
+        renderEntriesTab(tabContent, league, teams, refreshEntries);
+    } else if (isElimination) {
+        renderBracketTab(tabContent, league, teams, matches, refreshBracket);
+    } else {
+        renderLeagueMatchesTab(tabContent, league, teams, matches, refreshBracket);
+    }
+}
+
+/**
+ * Renderiza la pestaña de Inscripciones (Gestión de equipos que ingresan a la liga tras su creación)
+ */
+async function renderEntriesTab(container, league, enrolledTeams, refreshTab) {
+    const allTeams = await teamsDb.getByLeague(league.id);
+
+    container.innerHTML = `
+        <div class="entries-table-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+                <div>
+                    <h3 style="margin: 0; color: #f8fafc;">Equipos Inscriptos en ${league.name}</h3>
+                    <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #94a3b8;">
+                        Total: <strong>${enrolledTeams.length}</strong> / ${league.bracketTeamsCount ? league.bracketTeamsCount + ' requeridos para el cuadro' : 'sin límite'}
+                    </p>
+                </div>
+                <button id="btnEnrollTeam" class="btn btn-primary text-sm">+ Inscribir Nuevo Equipo</button>
+            </div>
+
+            ${enrolledTeams.length === 0 ? `
+                <p class="text-muted" style="text-align: center; padding: 2rem;">No hay equipos inscriptos en esta liga aún. ¡Haz clic en "+ Inscribir Nuevo Equipo" para agregar!</p>
+            ` : `
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Nombre del Equipo</th>
+                            <th>Ciudad</th>
+                            <th>Fecha de Registro</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${enrolledTeams.map((t, idx) => `
+                            <tr>
+                                <td><strong>${idx + 1}</strong></td>
+                                <td>
+                                    <strong style="color: #f8fafc;">${t.name}</strong>
+                                </td>
+                                <td>${t.city || 'Sin ciudad'}</td>
+                                <td style="font-size: 0.8rem; color: #94a3b8;">${t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'N/A'}</td>
+                                <td>
+                                    <a href="#team/${t.id}" class="btn btn-sm btn-secondary">Ver Perfil</a>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `}
+        </div>
+    `;
+
+    container.querySelector('#btnEnrollTeam').addEventListener('click', () => {
+        const enrolledIds = new Set(enrolledTeams.map(t => Number(t.id)));
+        showEnrollTeamModal(league.id, league.sport, enrolledIds, refreshTab);
+    });
+}
+
+/**
+ * Renderiza la pestaña de Partidos para ligas de formato Liga Regular
+ */
+function renderLeagueMatchesTab(container, league, teams, matches, refreshTab) {
+    const teamMap = new Map(teams.map(t => [Number(t.id), t.name]));
+    const statusColor = { 'Finalizado': '#10b981', 'En Juego': '#f59e0b', 'Programado': '#3b82f6' };
+
+    // Group by round if available, otherwise flat list
+    const grouped = {};
+    matches.forEach(m => {
+        const key = m.round ? `Jornada ${m.round}` : 'Partidos';
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(m);
+    });
+
+    container.innerHTML = `
+        <div class="glass-panel" style="padding: 1.5rem; border-radius: 14px; background: rgba(30, 41, 59, 0.65);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+                <h3 style="margin: 0; color: #f8fafc;">📅 Calendario de Partidos</h3>
+                <button id="btnAddLeagueMatch" class="btn btn-primary btn-sm">+ Programar Partido</button>
+            </div>
+
+            ${matches.length === 0 ? `
+                <p class="text-muted" style="text-align: center; padding: 2rem;">No hay partidos programados aún. ¡Agrega el primer partido!</p>
+            ` : Object.entries(grouped).map(([groupTitle, groupMatches]) => `
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="font-size: 0.78rem; font-weight: 700; color: #60a5fa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem; padding-bottom: 0.35rem; border-bottom: 1px solid rgba(96,165,250,0.25);">${groupTitle}</div>
+                    <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+                        ${groupMatches.map(m => {
+                            const home = teamMap.get(Number(m.homeTeamId)) || 'Por definir';
+                            const away = teamMap.get(Number(m.awayTeamId)) || 'Por definir';
+                            const hs = m.score?.home ?? m.homeScore ?? 0;
+                            const as = m.score?.away ?? m.awayScore ?? 0;
+                            const fin = m.status === 'Finalizado';
+                            return `
+                                <div class="league-match-row" data-match-id="${m.id}" style="display: flex; align-items: center; justify-content: space-between; background: rgba(15,23,42,0.55); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 0.75rem 1rem; cursor: pointer; transition: all 0.2s;">
+                                    <div style="flex: 1; text-align: right; font-weight: 600; color: #f8fafc; font-size: 0.95rem;">${home}</div>
+                                    <div style="min-width: 90px; text-align: center;">
+                                        ${fin
+                                            ? `<span style="font-size: 1.15rem; font-weight: 800; color: #f8fafc;">${hs} – ${as}</span>`
+                                            : `<span style="font-size: 0.85rem; font-weight: 700; color: #3b82f6;">VS</span>`
+                                        }
+                                        <div style="font-size: 0.7rem; color: ${statusColor[m.status] || '#94a3b8'}; margin-top: 0.2rem; font-weight: 700;">${m.status || 'Programado'}</div>
+                                    </div>
+                                    <div style="flex: 1; font-weight: 600; color: #f8fafc; font-size: 0.95rem;">${away}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+
+    container.querySelectorAll('.league-match-row').forEach(row => {
+        row.addEventListener('mouseenter', () => { row.style.borderColor = '#3b82f6'; row.style.transform = 'translateX(2px)'; });
+        row.addEventListener('mouseleave', () => { row.style.borderColor = 'rgba(255,255,255,0.07)'; row.style.transform = ''; });
+        row.addEventListener('click', () => {
+            const matchId = Number(row.dataset.matchId);
+            const match = matches.find(m => m.id === matchId);
+            if (match) showAdminMatchEditModal(match, teamMap, teams, refreshTab);
+        });
+    });
+
+    container.querySelector('#btnAddLeagueMatch')?.addEventListener('click', () => {
+        showAddMatchModal(league.id, teams, refreshTab);
+    });
+}
+
+/**
+ * Modal para programar un nuevo partido en Liga Regular
+ */
+function showAddMatchModal(leagueId, teams, onSuccess) {
+    let overlay = document.getElementById('add-match-modal');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'add-match-modal';
+        overlay.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.85); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 1000;`;
+        document.body.appendChild(overlay);
+    }
+
+    const teamOptions = teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    overlay.style.display = 'flex';
+    overlay.innerHTML = `
+        <div class="glass-panel" style="width: 100%; max-width: 460px; padding: 1.75rem; border-radius: 14px; background: rgba(30,41,59,0.95); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <h3 style="margin-top:0; text-align:center; color:#f8fafc;">Programar Partido</h3>
+            <form id="formAddMatch">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                    <div>
+                        <label style="display:block; font-size:0.82rem; color:#94a3b8; margin-bottom:0.25rem;">Local *</label>
+                        <select id="addMatchHome" class="form-control" required style="width:100%;">
+                            <option value="">Seleccionar...</option>${teamOptions}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.82rem; color:#94a3b8; margin-bottom:0.25rem;">Visitante *</label>
+                        <select id="addMatchAway" class="form-control" required style="width:100%;">
+                            <option value="">Seleccionar...</option>${teamOptions}
+                        </select>
+                    </div>
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <label style="display:block; font-size:0.82rem; color:#94a3b8; margin-bottom:0.25rem;">Fecha y Hora</label>
+                    <input type="datetime-local" id="addMatchDate" class="form-control" style="width:100%; box-sizing:border-box;" />
+                </div>
+                <div style="margin-bottom:1.25rem;">
+                    <label style="display:block; font-size:0.82rem; color:#94a3b8; margin-bottom:0.25rem;">Jornada / Ronda (Opcional)</label>
+                    <input type="text" id="addMatchRound" class="form-control" placeholder="Ej. 1" style="width:100%; box-sizing:border-box;" />
+                </div>
+                <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
+                    <button type="button" id="btnCancelAddMatch" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Partido</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    const closeModal = () => { overlay.style.display = 'none'; };
+    overlay.querySelector('#btnCancelAddMatch').addEventListener('click', closeModal);
+    overlay.querySelector('#formAddMatch').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const homeId = Number(overlay.querySelector('#addMatchHome').value);
+        const awayId = Number(overlay.querySelector('#addMatchAway').value);
+        if (!homeId || !awayId) { alert('Selecciona ambos equipos.'); return; }
+        if (homeId === awayId) { alert('Un equipo no puede jugar contra sí mismo.'); return; }
+        const date = overlay.querySelector('#addMatchDate').value;
+        const round = overlay.querySelector('#addMatchRound').value.trim();
+        try {
+            await matchesDb.create({ leagueId, homeTeamId: homeId, awayTeamId: awayId, date: date || null, status: 'Programado', round: round || null });
+            closeModal();
+            if (typeof onSuccess === 'function') onSuccess();
+        } catch (err) { alert('Error al guardar partido: ' + err.message); }
+    });
+}
+
+/**
+ * Modal para inscribir equipo — muestra equipos existentes del mismo deporte y permite crear nuevos
+ */
+async function showEnrollTeamModal(leagueId, leagueSport, enrolledIds, onSuccess) {
+    let overlay = document.getElementById('enroll-team-modal');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'enroll-team-modal';
+        overlay.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.85); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 1000;`;
+        document.body.appendChild(overlay);
+    }
+
+    // Cargar todos los equipos de la misma liga de deporte (sin duplicar los ya inscritos)
+    const allTeams = await getAllTeams();
+
+    // Teams of same sport not already enrolled in THIS league
+    const availableTeams = allTeams.filter(t => !enrolledIds.has(Number(t.id)));
+
+    const availableOptions = availableTeams.length > 0
+        ? availableTeams.map(t => `<option value="existing:${t.id}">${t.name}${t.city ? ' — ' + t.city : ''}</option>`).join('')
+        : '';
+
+    overlay.style.display = 'flex';
+    overlay.innerHTML = `
+        <div class="glass-panel" style="width: 100%; max-width: 480px; padding: 1.75rem; border-radius: 14px; background: rgba(30,41,59,0.95); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <h2 style="margin-top:0; margin-bottom:0.25rem; text-align:center; color:#f8fafc;">Inscribir Equipo</h2>
+            <p style="text-align:center; font-size:0.82rem; color:#94a3b8; margin-top:0; margin-bottom:1.25rem;">Selecciona un equipo existente o crea uno nuevo</p>
+
+            <div style="display:flex; gap:0.5rem; margin-bottom:1.25rem;">
+                <button id="tabPickTeam" class="tab-btn active" style="flex:1;">Equipo Existente</button>
+                <button id="tabNewTeam" class="tab-btn" style="flex:1;">Crear Nuevo</button>
+            </div>
+
+            <div id="panelPickTeam">
+                ${availableTeams.length === 0
+                    ? `<p class="text-muted" style="text-align:center; padding:1rem;">No hay equipos disponibles para inscribir. Crea uno nuevo.</p>`
+                    : `<div style="margin-bottom:1rem;">
+                        <label style="display:block; font-size:0.82rem; color:#94a3b8; margin-bottom:0.25rem;">Seleccionar Equipo</label>
+                        <select id="selectExistingTeam" class="form-control" style="width:100%;">
+                            <option value="">-- Elige un equipo --</option>
+                            ${availableOptions}
+                        </select>
+                    </div>
+                    <div style="display:flex; justify-content:flex-end; gap:0.75rem;">
+                        <button id="btnCancelEnroll" class="btn btn-secondary">Cancelar</button>
+                        <button id="btnEnrollExisting" class="btn btn-primary">Inscribir</button>
+                    </div>`
+                }
+            </div>
+
+            <div id="panelNewTeam" style="display:none;">
+                <form id="formEnrollTeam">
+                    <div style="margin-bottom:1rem;">
+                        <label style="display:block; font-size:0.82rem; color:#94a3b8; margin-bottom:0.25rem;">Nombre del Equipo *</label>
+                        <input type="text" id="enrollTeamName" class="form-control" required placeholder="Ej. Real Madrid FC" style="width:100%; box-sizing:border-box;" />
+                    </div>
+                    <div style="margin-bottom:1.25rem;">
+                        <label style="display:block; font-size:0.82rem; color:#94a3b8; margin-bottom:0.25rem;">Ciudad / Sede</label>
+                        <input type="text" id="enrollTeamCity" class="form-control" placeholder="Ej. Madrid" style="width:100%; box-sizing:border-box;" />
+                    </div>
+                    <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
+                        <button type="button" id="btnCancelNewTeam" class="btn btn-secondary">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Crear e Inscribir</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+
+    const closeModal = () => { overlay.style.display = 'none'; };
+    const panelPick = overlay.querySelector('#panelPickTeam');
+    const panelNew = overlay.querySelector('#panelNewTeam');
+    const tabPick = overlay.querySelector('#tabPickTeam');
+    const tabNew = overlay.querySelector('#tabNewTeam');
+
+    tabPick?.addEventListener('click', () => { panelPick.style.display=''; panelNew.style.display='none'; tabPick.classList.add('active'); tabNew.classList.remove('active'); });
+    tabNew?.addEventListener('click', () => { panelNew.style.display=''; panelPick.style.display='none'; tabNew.classList.add('active'); tabPick.classList.remove('active'); });
+
+    overlay.querySelector('#btnCancelEnroll')?.addEventListener('click', closeModal);
+    overlay.querySelector('#btnCancelNewTeam')?.addEventListener('click', closeModal);
+
+    // Enroll existing team → just update its leagueId
+    overlay.querySelector('#btnEnrollExisting')?.addEventListener('click', async () => {
+        const select = overlay.querySelector('#selectExistingTeam');
+        const val = select?.value;
+        if (!val) { alert('Selecciona un equipo.'); return; }
+        const teamId = Number(val.replace('existing:', ''));
+        try {
+            const team = await teamsDb.getById(teamId);
+            if (team) {
+                await teamsDb.update(teamId, { ...team, leagueId: Number(leagueId) });
+            }
+            closeModal();
+            if (typeof onSuccess === 'function') onSuccess();
+        } catch (err) { alert('Error al inscribir equipo: ' + err.message); }
+    });
+
+    // Create new team
+    overlay.querySelector('#formEnrollTeam')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = overlay.querySelector('#enrollTeamName').value.trim();
+        const city = overlay.querySelector('#enrollTeamCity').value.trim();
+        try {
+            await createTeam({ leagueId: Number(leagueId), name, city });
+            closeModal();
+            if (typeof onSuccess === 'function') onSuccess();
+        } catch (err) { alert(`Error al crear equipo: ${err.message}`); }
+    });
+}
+
+/**
+ * Renderiza el Cuadro de Eliminación (Bracket Visualizer)
+ */
+function renderBracketTab(container, league, teams, matches, refreshTab) {
+    const teamMap = new Map(teams.map(t => [Number(t.id), t.name]));
+
+    if (matches.length === 0) {
+        const requiredCount = Number(league.bracketTeamsCount) || 8;
+        const currentCount = teams.length;
+        const canGenerate = currentCount >= requiredCount;
+
+        container.innerHTML = `
+            <div class="glass-panel text-center" style="padding: 2.5rem 1.5rem; border-radius: 14px;">
+                <h3 style="margin-top: 0; color: #f8fafc;">Cuadro de Eliminación no generado</h3>
+                <p class="text-secondary mb-4">
+                    Equipos inscriptos: <strong>${currentCount}</strong> / ${requiredCount} requeridos.
+                </p>
+                <button id="btnGenerateBracket" class="btn btn-primary" ${!canGenerate ? 'disabled' : ''}>
+                    ⚡ Generar Cuadro (${requiredCount} Equipos)
+                </button>
+                ${!canGenerate ? `<p class="text-xs text-muted" style="margin-top: 0.5rem;">Inscribe al menos ${requiredCount} equipos en la pestaña 'Inscripciones' para habilitar.</p>` : ''}
+            </div>
+        `;
+
+        if (canGenerate) {
+            container.querySelector('#btnGenerateBracket').addEventListener('click', async () => {
+                try {
+                    const teamIds = teams.slice(0, requiredCount).map(t => Number(t.id));
+                    await bracketService.generateBracket(league.id, teamIds);
+                    refreshTab();
+                } catch (err) {
+                    alert(`Error al generar cuadro: ${err.message}`);
+                }
+            });
+        }
+        return;
+    }
+
+    // Agrupamos los partidos por Ronda y ordenamos del primer al último (Octavos -> Final / Doble Eliminación)
+    const ROUND_ORDER = [
+        'Octavos Ganadores',
+        'Cuartos Ganadores',
+        'Semifinal Ganadores',
+        'Ronda 1 Perdedores',
+        'Ronda 2 Perdedores',
+        'Ronda 3 Perdedores',
+        'Ronda 4 Perdedores',
+        'Ronda 5 Perdedores',
+        'Final Ganadores',
+        'Final Perdedores',
+        'Gran Final',
+        'Octavos de Final',
+        'Cuartos de Final',
+        'Semifinal',
+        'Final'
+    ];
+    const roundMap = new Map();
+    matches.forEach(m => {
+        const rName = m.round || 'Cuadro';
+        if (!roundMap.has(rName)) roundMap.set(rName, []);
+        roundMap.get(rName).push(m);
+    });
+
+    const rounds = Array.from(roundMap.entries()).sort(([a], [b]) => {
+        const ai = ROUND_ORDER.indexOf(a);
+        const bi = ROUND_ORDER.indexOf(b);
+        if (ai === -1 && bi === -1) return 0;
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+    });
+
+    container.innerHTML = `
+        <div class="glass-panel" style="padding: 1.5rem; border-radius: 14px; background: rgba(30, 41, 59, 0.7);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                <h3 style="margin: 0; color: #f8fafc;">🏆 Cuadro Torneo de Eliminación</h3>
+                <span class="text-muted" style="font-size: 0.8rem;">Haz clic en un partido como Administrador para ingresar resultados &rarr;</span>
+            </div>
+
+            <div class="bracket-wrapper">
+                ${rounds.map(([roundTitle, roundMatches]) => `
+                    <div class="bracket-round">
+                        <div class="bracket-round-header">${roundTitle}</div>
+                        ${roundMatches.map(m => renderBracketMatchCard(m, teamMap, matches)).join('')}
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+
+    // Wait for DOM to adjust heights, then draw lines
+    setTimeout(() => {
+        drawBracketLines(container, matches);
+    }, 100);
+
+    // Resize listener
+    const resizeHandler = () => drawBracketLines(container, matches);
+    window.addEventListener('resize', resizeHandler);
+
+    // Clean up event listener when element is removed
+    const observer = new MutationObserver(() => {
+        if (!document.body.contains(container)) {
+            window.removeEventListener('resize', resizeHandler);
+            observer.disconnect();
+        }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Click listener para editar resultados del partido (Admin)
+    container.querySelectorAll('.bracket-match-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const matchId = Number(card.dataset.matchId);
+            const match = matches.find(m => m.id === matchId);
+            if (match) showAdminMatchEditModal(match, teamMap, teams, refreshTab);
+        });
+    });
+}
+
+function drawBracketLines(container, matches) {
+    const wrapper = container.querySelector('.bracket-wrapper');
+    if (!wrapper) return;
+
+    // SVG Canvas
+    let svg = wrapper.querySelector('.bracket-svg');
+    if (!svg) {
+        svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('class', 'bracket-svg');
+        svg.style.cssText = 'position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1;';
+        wrapper.appendChild(svg);
+    } else {
+        svg.innerHTML = '';
+    }
+
+    svg.setAttribute('width', wrapper.scrollWidth);
+    svg.setAttribute('height', wrapper.scrollHeight);
+
+    const cards = wrapper.querySelectorAll('.bracket-match-card');
+    const cardMap = new Map();
+    cards.forEach(card => {
+        cardMap.set(Number(card.dataset.matchId), card);
+    });
+
+    const wrapperRect = wrapper.getBoundingClientRect();
+
+    cards.forEach(card => {
+        const matchId = Number(card.dataset.matchId);
+        const match = matches.find(m => m.id === matchId);
+        if (!match || !match.nextMatchId) return;
+
+        const nextCard = cardMap.get(Number(match.nextMatchId));
+        if (!nextCard) return;
+
+        const rect1 = card.getBoundingClientRect();
+        const rect2 = nextCard.getBoundingClientRect();
+
+        const x1 = rect1.right - wrapperRect.left + wrapper.scrollLeft;
+        const y1 = rect1.top - wrapperRect.top + rect1.height / 2 + wrapper.scrollTop;
+
+        const x2 = rect2.left - wrapperRect.left + wrapper.scrollLeft;
+        const y2 = rect2.top - wrapperRect.top + rect2.height / 2 + wrapper.scrollTop;
+
+        const xMid = x1 + (x2 - x1) / 2;
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const d = `M ${x1} ${y1} H ${xMid} V ${y2} H ${x2}`;
+        path.setAttribute('d', d);
+
+        const isWinner = match.status === 'Finalizado' && match.winnerId;
+        const strokeColor = isWinner ? '#60a5fa' : 'rgba(255, 255, 255, 0.15)';
+        const strokeWidth = isWinner ? '3' : '2';
+
+        path.setAttribute('stroke', strokeColor);
+        path.setAttribute('stroke-width', strokeWidth);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
+        if (isWinner) {
+            path.setAttribute('style', 'filter: drop-shadow(0 0 3px rgba(96, 165, 250, 0.5)); transition: stroke 0.3s;');
+        }
+        svg.appendChild(path);
+    });
+}
+
+function renderBracketMatchCard(match, teamMap, matches) {
+    let homeName = 'Por definir';
+    let awayName = 'Por definir';
+
+    if (match.homeTeamId) {
+        homeName = teamMap.get(Number(match.homeTeamId)) || 'Equipo';
+    } else {
+        const sourceMatch = matches.find(m => m.nextMatchId === match.id && m.nextMatchHomeSlot === true);
+        if (sourceMatch) homeName = `Ganador P.${sourceMatch.id}`;
+    }
+
+    if (match.awayTeamId) {
+        awayName = teamMap.get(Number(match.awayTeamId)) || 'Equipo';
+    } else {
+        const sourceMatch = matches.find(m => m.nextMatchId === match.id && m.nextMatchHomeSlot === false);
+        if (sourceMatch) awayName = `Ganador P.${sourceMatch.id}`;
+    }
+
+    const isFinalized = match.status === 'Finalizado';
+    const homeWinner = isFinalized && match.winnerId && Number(match.winnerId) === Number(match.homeTeamId);
+    const awayWinner = isFinalized && match.winnerId && Number(match.winnerId) === Number(match.awayTeamId);
+
+    const hScore = match.score?.home ?? match.homeScore ?? 0;
+    const aScore = match.score?.away ?? match.awayScore ?? 0;
+
+    const homeAvatar = match.homeTeamId ? homeName.substring(0, 2).toUpperCase() : '?';
+    const awayAvatar = match.awayTeamId ? awayName.substring(0, 2).toUpperCase() : '?';
+
+    return `
+        <div class="bracket-match-card" data-match-id="${match.id}">
+            <div class="bracket-card-header">
+                <span>Partido #${match.id}</span>
+                <span class="status-badge status-${match.status.toLowerCase().replace(' ', '-')}">${match.status || 'Programado'}</span>
+            </div>
+
+            <div class="bracket-team-row ${homeWinner ? 'winner' : ''} ${!match.homeTeamId ? 'placeholder-team' : ''}">
+                <div class="team-info">
+                    <div class="team-avatar">${homeAvatar}</div>
+                    <span class="team-name" title="${homeName}">${homeName}</span>
+                </div>
+                <span class="bracket-score-pill">${isFinalized ? hScore : '-'}</span>
+            </div>
+
+            <div class="bracket-team-row ${awayWinner ? 'winner' : ''} ${!match.awayTeamId ? 'placeholder-team' : ''}" style="margin-top: 0.35rem;">
+                <div class="team-info">
+                    <div class="team-avatar">${awayAvatar}</div>
+                    <span class="team-name" title="${awayName}">${awayName}</span>
+                </div>
+                <span class="bracket-score-pill">${isFinalized ? aScore : '-'}</span>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Modal Admin para actualizar marcador, equipos y resultado del partido en el Bracket
+ */
+function showAdminMatchEditModal(match, teamMap, teams, onSuccess) {
+    let overlay = document.getElementById('admin-match-modal');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'admin-match-modal';
+        overlay.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px);
+            display: flex; justify-content: center; align-items: center; z-index: 1000;
+        `;
+        document.body.appendChild(overlay);
+    }
+
+    const hScore = match.score?.home ?? match.homeScore ?? 0;
+    const aScore = match.score?.away ?? match.awayScore ?? 0;
+
+    overlay.style.display = 'flex';
+    overlay.innerHTML = `
+        <div class="glass-panel" style="width: 100%; max-width: 440px; padding: 1.75rem; border-radius: 14px; background: rgba(30, 41, 59, 0.95); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <h3 style="margin-top: 0; margin-bottom: 0.25rem; text-align: center; color: #f8fafc;">Editar Resultado y Equipos</h3>
+            <p style="text-align: center; font-size: 0.8rem; color: #94a3b8; margin-top: 0; margin-bottom: 1.25rem;">Ronda: ${match.round || 'Eliminatoria'}</p>
+
+            <form id="formAdminMatch">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem;">
+                    <div style="flex: 1; text-align: center;">
+                        <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem;">Equipo Local</label>
+                        <select id="matchHomeTeamSelect" class="form-control" style="width: 100%; box-sizing: border-box; margin-bottom: 0.5rem; background: #0f172a; color: #f8fafc; border: 1px solid #334155; padding: 0.375rem; border-radius: 6px;">
+                            <option value="">Por definir</option>
+                            ${teams.map(t => `<option value="${t.id}" ${Number(t.id) === Number(match.homeTeamId) ? 'selected' : ''}>${t.name}</option>`).join('')}
+                        </select>
+                        <input type="number" id="matchHomeScore" class="form-control" min="0" value="${hScore}" style="width: 70px; text-align: center; margin: 0 auto;" />
+                    </div>
+
+                    <span style="font-weight: 800; font-size: 1.2rem; color: #64748b; margin-top: 1.25rem;">VS</span>
+
+                    <div style="flex: 1; text-align: center;">
+                        <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem;">Equipo Visitante</label>
+                        <select id="matchAwayTeamSelect" class="form-control" style="width: 100%; box-sizing: border-box; margin-bottom: 0.5rem; background: #0f172a; color: #f8fafc; border: 1px solid #334155; padding: 0.375rem; border-radius: 6px;">
+                            <option value="">Por definir</option>
+                            ${teams.map(t => `<option value="${t.id}" ${Number(t.id) === Number(match.awayTeamId) ? 'selected' : ''}>${t.name}</option>`).join('')}
+                        </select>
+                        <input type="number" id="matchAwayScore" class="form-control" min="0" value="${aScore}" style="width: 70px; text-align: center; margin: 0 auto;" />
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem;">Estado del Partido</label>
+                    <select id="matchStatusSelect" class="form-control" style="width: 100%; box-sizing: border-box;">
+                        <option value="Programado" ${match.status === 'Programado' ? 'selected' : ''}>Programado</option>
+                        <option value="En Juego" ${match.status === 'En Juego' ? 'selected' : ''}>En Juego</option>
+                        <option value="Finalizado" ${match.status === 'Finalizado' ? 'selected' : ''}>Finalizado</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                    <button type="button" id="btnCancelMatchEdit" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    const closeModal = () => { overlay.style.display = 'none'; };
+    overlay.querySelector('#btnCancelMatchEdit').addEventListener('click', closeModal);
+
+    overlay.querySelector('#formAdminMatch').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const homeScoreVal = Number(overlay.querySelector('#matchHomeScore').value);
+        const awayScoreVal = Number(overlay.querySelector('#matchAwayScore').value);
+        const statusVal = overlay.querySelector('#matchStatusSelect').value;
+
+        const homeTeamSelect = overlay.querySelector('#matchHomeTeamSelect');
+        const awayTeamSelect = overlay.querySelector('#matchAwayTeamSelect');
+        const homeTeamIdVal = homeTeamSelect.value ? Number(homeTeamSelect.value) : null;
+        const awayTeamIdVal = awayTeamSelect.value ? Number(awayTeamSelect.value) : null;
+
+        try {
+            await bracketService.updateMatchResult(
+                match.id,
+                homeScoreVal,
+                awayScoreVal,
+                statusVal,
+                null,
+                homeTeamIdVal,
+                awayTeamIdVal
+            );
+            closeModal();
+            if (typeof onSuccess === 'function') onSuccess();
+        } catch (err) {
+            alert(`Error al guardar resultado: ${err.message}`);
+        }
+    });
+}
+
 function renderFormView(container, leagueToEdit = null) {
     const isEdit = !!leagueToEdit;
 
@@ -138,7 +852,6 @@ function renderFormView(container, leagueToEdit = null) {
             </div>
 
             <form id="leagueForm">
-                <!-- Rejilla de 2 columnas -->
                 <div class="form-grid-2col">
                     <div class="form-group">
                         <label class="label text-sm">Nombre de la Liga</label>
@@ -165,6 +878,7 @@ function renderFormView(container, leagueToEdit = null) {
                             <select name="mode" id="leagueModeSelect" class="input" required>
                                 <option value="liga">Liga Regular (Todos contra todos)</option>
                                 <option value="eliminacion">Eliminación Directa (Brackets)</option>
+                                <option value="doble-eliminacion">Doble Eliminación (Brackets)</option>
                             </select>
                         </div>
 
@@ -191,12 +905,11 @@ function renderFormView(container, leagueToEdit = null) {
         </div>
     `;
 
-    // (Mantener el resto del JS de renderFormView exactamente igual)
     const modeSelect = container.querySelector('#leagueModeSelect');
     const optionsContainer = container.querySelector('#modeOptionsContainer');
 
     modeSelect?.addEventListener('change', (e) => {
-        if (e.target.value === 'eliminacion') {
+        if (e.target.value === 'eliminacion' || e.target.value === 'doble-eliminacion') {
             optionsContainer.innerHTML = `
                 <label class="label text-sm">Cantidad de Equipos en Llave</label>
                 <select name="bracketTeamsCount" class="input">

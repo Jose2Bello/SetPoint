@@ -1,321 +1,387 @@
-// js/views/players.view.js
-import { getActiveLeague } from '../db/leagues.db.js';
-import { getTeamsByLeague } from '../db/teams.db.js';
+/* js/views/players.view.js */
 import { getAllPlayers, createPlayer } from '../db/players.db.js';
-import { debounce } from '../utils/debounce.js';
-import { SPORTS } from '../sports-terms.js';
+import { getTeamsByLeague } from '../db/teams.db.js';
+import { getActiveLeague } from '../db/leagues.db.js';
+import { initDB } from '../db/connection.js';
 
-export async function renderPlayers(container) {
-    container.textContent = '';
-    const loading = document.createElement('loading-state');
-    loading.setAttribute('message', 'Cargando jugadores...');
-    container.appendChild(loading);
+export async function renderPlayersView(container) {
+    container.innerHTML = '<div class="loading-state"><p>Cargando atletas...</p></div>';
+
+    await initDB();
 
     const activeLeague = await getActiveLeague();
     if (!activeLeague) {
-        container.textContent = '';
-        const emptyDiv = document.createElement('div');
-        emptyDiv.className = 'empty-state';
-
-        const h2 = document.createElement('h2');
-        h2.textContent = 'No hay liga activa';
-        emptyDiv.appendChild(h2);
-
-        const p = document.createElement('p');
-        p.textContent = 'Debes activar o crear una liga para gestionar sus jugadores.';
-        emptyDiv.appendChild(p);
-
-        const a = document.createElement('a');
-        a.href = '#leagues';
-        a.className = 'btn btn-primary';
-        a.textContent = 'Ir a Ligas';
-        emptyDiv.appendChild(a);
-
-        container.appendChild(emptyDiv);
+        container.innerHTML = `
+            <div class="glass-panel text-center" style="padding: 2rem;">
+                <h2>No hay una liga activa seleccionada</h2>
+                <p class="text-muted">Selecciona o crea una liga primero para ver sus jugadores.</p>
+            </div>
+        `;
         return;
     }
 
-    const sportConfig = SPORTS[activeLeague.sport] || SPORTS.futbol;
-    const teams = await getTeamsByLeague(activeLeague.id);
-    const players = await getAllPlayers(activeLeague.id);
+    const [rawPlayers, rawTeams] = await Promise.all([
+        getAllPlayers(activeLeague.id),
+        getTeamsByLeague(activeLeague.id)
+    ]);
 
-    container.textContent = '';
+    // 🛡️ Blindaje para asegurar arreglos válidos y evitar errores de tipo
+    const allPlayers = Array.isArray(rawPlayers) ? rawPlayers : [];
+    const teams = Array.isArray(rawTeams) ? rawTeams : [];
 
-    // Cabecera
-    const headerDiv = document.createElement('div');
-    headerDiv.className = 'view-header';
+    const teamMap = new Map(teams.map(t => [Number(t.id), t.name]));
 
-    const titleGroup = document.createElement('div');
-    const h1 = document.createElement('h1');
-    h1.textContent = 'Plantel de Jugadores';
-    const pSub = document.createElement('p');
-    pSub.textContent = 'Gestión de atletas para la liga: ';
-    const strongLeague = document.createElement('strong');
-    strongLeague.textContent = activeLeague.name;
-    pSub.appendChild(strongLeague);
-    titleGroup.appendChild(h1);
-    titleGroup.appendChild(pSub);
+    container.innerHTML = `
+        <div class="players-view-container" style="display: flex; flex-direction: column; gap: 2rem;">
+            
+            <!-- Encabezado y Acciones -->
+            <div class="section-header-flex" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <h1 style="margin: 0;">Gestión de atletas</h1>
+                    <p class="text-muted" style="margin: 0.25rem 0 0 0;">Liga activa: <strong>${activeLeague.name}</strong></p>
+                </div>
+                <button id="btn-new-player" class="btn btn-primary">+ Nuevo Jugador</button>
+            </div>
 
-    const btnNew = document.createElement('button');
-    btnNew.id = 'btn-open-player-modal';
-    btnNew.className = 'btn btn-primary';
-    btnNew.textContent = '+ Nuevo Jugador';
+            <!-- 1. BÚSQUEDA Y LISTA GENERAL (ARRIBA) -->
+            <div class="glass-panel" style="padding: 1.5rem; border-radius: 12px; background: rgba(30, 41, 59, 0.7);">
+                <h3 style="margin-top: 0; margin-bottom: 1rem;">Todos los Jugadores</h3>
+                
+                <div class="filters-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                    <input type="text" id="search-player-input" class="form-control" placeholder="Buscar por nombre (ej. Chavez)..." />
+                    
+                    <select id="filter-team-select" class="form-control">
+                        <option value="">Todos los equipos</option>
+                        ${teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+                    </select>
 
-    headerDiv.appendChild(titleGroup);
-    headerDiv.appendChild(btnNew);
-    container.appendChild(headerDiv);
+                    <select id="filter-position-select" class="form-control">
+                        <option value="">Todas las posiciones</option>
+                        <option value="Portero">Portero</option>
+                        <option value="Defensa">Defensa</option>
+                        <option value="Mediocampista">Mediocampista</option>
+                        <option value="Delantero">Delantero</option>
+                    </select>
 
-    // Filtros
-    const filtersBar = document.createElement('div');
-    filtersBar.className = 'filters-bar glass-panel';
+                    <button id="btn-clear-filters" class="btn btn-secondary">Limpiar</button>
+                </div>
 
-    const searchInput = document.createElement('input');
-    searchInput.type = 'text';
-    searchInput.id = 'search-player';
-    searchInput.placeholder = 'Buscar por nombre...';
-    searchInput.className = 'form-control';
+                <div id="players-results-grid" class="cards-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem;">
+                </div>
+            </div>
 
-    const teamSelect = document.createElement('select');
-    teamSelect.id = 'filter-team';
-    teamSelect.className = 'form-control';
-    const defaultTeamOpt = document.createElement('option');
-    defaultTeamOpt.value = '';
-    defaultTeamOpt.textContent = 'Todos los equipos';
-    teamSelect.appendChild(defaultTeamOpt);
-    teams.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t.id;
-        opt.textContent = t.name;
-        teamSelect.appendChild(opt);
-    });
+            <!-- 2. JUGADORES DESTACADOS (CARRUSEL / SLIDER ABAJO) -->
+            ${allPlayers.length > 0 ? renderFeaturedSliderHTML(allPlayers, teamMap) : ''}
 
-    const posSelect = document.createElement('select');
-    posSelect.id = 'filter-position';
-    posSelect.className = 'form-control';
-    const defaultPosOpt = document.createElement('option');
-    defaultPosOpt.value = '';
-    defaultPosOpt.textContent = 'Todas las posiciones';
-    posSelect.appendChild(defaultPosOpt);
-    (sportConfig.positions || []).forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p;
-        opt.textContent = p;
-        posSelect.appendChild(opt);
-    });
+            <!-- 3. TOP ANOTADORES (ABAJO) -->
+            ${allPlayers.length > 0 ? renderTopScorersHTML(allPlayers, teamMap) : ''}
 
-    const btnClear = document.createElement('button');
-    btnClear.id = 'btn-clear-filters';
-    btnClear.className = 'btn btn-secondary';
-    btnClear.textContent = 'Limpiar';
+        </div>
+    `;
 
-    filtersBar.appendChild(searchInput);
-    filtersBar.appendChild(teamSelect);
-    filtersBar.appendChild(posSelect);
-    filtersBar.appendChild(btnClear);
-    container.appendChild(filtersBar);
+    // Lógica de Filtros
+    const searchInput = container.querySelector('#search-player-input');
+    const teamSelect = container.querySelector('#filter-team-select');
+    const positionSelect = container.querySelector('#filter-position-select');
+    const btnClear = container.querySelector('#btn-clear-filters');
+    const resultsGrid = container.querySelector('#players-results-grid');
 
-    // Grid de jugadores
-    const gridEl = document.createElement('div');
-    gridEl.id = 'players-grid';
-    gridEl.className = 'cards-grid';
-    container.appendChild(gridEl);
+    function applyFilters() {
+        const query = searchInput.value.trim().toLowerCase();
+        const selectedTeam = teamSelect.value ? Number(teamSelect.value) : null;
+        const selectedPos = positionSelect.value;
 
-    // Modal
-    const modal = document.createElement('div');
-    modal.id = 'player-modal';
-    modal.className = 'modal hidden';
-
-    const modalContent = document.createElement('div');
-    modalContent.className = 'modal-content glass-panel';
-
-    const modalTitle = document.createElement('h3');
-    modalTitle.textContent = 'Registrar Nuevo Jugador';
-    modalContent.appendChild(modalTitle);
-
-    const form = document.createElement('form');
-    form.id = 'player-form';
-
-    // Grupo Nombre
-    const groupName = document.createElement('div');
-    groupName.className = 'form-group';
-    const labelName = document.createElement('label');
-    labelName.textContent = 'Nombre Completo *';
-    const inputName = document.createElement('input');
-    inputName.type = 'text';
-    inputName.name = 'name';
-    inputName.required = true;
-    inputName.className = 'form-control';
-    groupName.appendChild(labelName);
-    groupName.appendChild(inputName);
-    form.appendChild(groupName);
-
-    // Grupo Foto
-    const groupPhoto = document.createElement('div');
-    groupPhoto.className = 'form-group';
-    const labelPhoto = document.createElement('label');
-    labelPhoto.textContent = 'URL de Foto (Opcional)';
-    const inputPhoto = document.createElement('input');
-    inputPhoto.type = 'url';
-    inputPhoto.name = 'photo';
-    inputPhoto.className = 'form-control';
-    inputPhoto.placeholder = 'https://...';
-    groupPhoto.appendChild(labelPhoto);
-    groupPhoto.appendChild(inputPhoto);
-    form.appendChild(groupPhoto);
-
-    // Grupo Equipo
-    const groupTeam = document.createElement('div');
-    groupTeam.className = 'form-group';
-    const labelTeam = document.createElement('label');
-    labelTeam.textContent = 'Equipo *';
-    const selectTeamForm = document.createElement('select');
-    selectTeamForm.name = 'teamId';
-    selectTeamForm.required = true;
-    selectTeamForm.className = 'form-control';
-    const optDefTeam = document.createElement('option');
-    optDefTeam.value = '';
-    optDefTeam.textContent = 'Seleccione equipo';
-    selectTeamForm.appendChild(optDefTeam);
-    teams.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t.id;
-        opt.textContent = t.name;
-        selectTeamForm.appendChild(opt);
-    });
-    groupTeam.appendChild(labelTeam);
-    groupTeam.appendChild(selectTeamForm);
-    form.appendChild(groupTeam);
-
-    // Fila Posición y Dorsal
-    const formRow = document.createElement('div');
-    formRow.className = 'form-row';
-
-    const groupPos = document.createElement('div');
-    groupPos.className = 'form-group';
-    const labelPos = document.createElement('label');
-    labelPos.textContent = 'Posición *';
-    const inputPos = document.createElement('input');
-    inputPos.type = 'text';
-    inputPos.name = 'position';
-    inputPos.required = true;
-    inputPos.className = 'form-control';
-    inputPos.placeholder = sportConfig.positions?.[0] || 'Posición';
-    groupPos.appendChild(labelPos);
-    groupPos.appendChild(inputPos);
-
-    const groupNum = document.createElement('div');
-    groupNum.className = 'form-group';
-    const labelNum = document.createElement('label');
-    labelNum.textContent = 'Dorsal / Número *';
-    const inputNum = document.createElement('input');
-    inputNum.type = 'number';
-    inputNum.name = 'number';
-    inputNum.required = true;
-    inputNum.min = '1';
-    inputNum.max = '99';
-    inputNum.className = 'form-control';
-    groupNum.appendChild(labelNum);
-    groupNum.appendChild(inputNum);
-
-    formRow.appendChild(groupPos);
-    formRow.appendChild(groupNum);
-    form.appendChild(formRow);
-
-    // Acciones Modal
-    const modalActions = document.createElement('div');
-    modalActions.className = 'modal-actions';
-    const btnCancel = document.createElement('button');
-    btnCancel.type = 'button';
-    btnCancel.id = 'btn-close-modal';
-    btnCancel.className = 'btn btn-secondary';
-    btnCancel.textContent = 'Cancelar';
-
-    const btnSubmit = document.createElement('button');
-    btnSubmit.type = 'submit';
-    btnSubmit.className = 'btn btn-primary';
-    btnSubmit.textContent = 'Guardar Jugador';
-
-    modalActions.appendChild(btnCancel);
-    modalActions.appendChild(btnSubmit);
-    form.appendChild(modalActions);
-
-    modalContent.appendChild(form);
-    modal.appendChild(modalContent);
-    container.appendChild(modal);
-
-    const teamMap = new Map(teams.map(t => [t.id, t]));
-
-    function renderList(dataToRender) {
-        gridEl.textContent = '';
-        if (dataToRender.length === 0) {
-            const pNoData = document.createElement('p');
-            pNoData.className = 'no-data';
-            pNoData.textContent = 'No se encontraron jugadores registrados.';
-            gridEl.appendChild(pNoData);
-            return;
-        }
-        dataToRender.forEach(p => {
-            const team = teamMap.get(p.teamId);
-            const card = document.createElement('player-card');
-            card.setAttribute('player-id', p.id);
-            card.setAttribute('name', p.name);
-            card.setAttribute('position', p.position);
-            card.setAttribute('number', p.number);
-            card.setAttribute('team-name', team ? team.name : '');
-            if (p.photo) card.setAttribute('photo', p.photo);
-            gridEl.appendChild(card);
-        });
-    }
-
-    renderList(players);
-
-    const applyFilters = debounce(() => {
-        const query = searchInput.value.toLowerCase();
-        const teamId = teamSelect.value;
-        const pos = posSelect.value;
-
-        const filtered = players.filter(p => {
-            const matchesName = p.name.toLowerCase().includes(query);
-            const matchesTeam = teamId ? String(p.teamId) === teamId : true;
-            const matchesPos = pos ? p.position === pos : true;
+        const filtered = allPlayers.filter(p => {
+            const matchesName = p.name ? p.name.toLowerCase().includes(query) : false;
+            const matchesTeam = !selectedTeam || Number(p.teamId) === selectedTeam;
+            const matchesPos = !selectedPos || p.position === selectedPos;
             return matchesName && matchesTeam && matchesPos;
         });
 
-        renderList(filtered);
-    }, 300);
+        renderPlayerCards(resultsGrid, filtered, teamMap);
+    }
 
     searchInput.addEventListener('input', applyFilters);
     teamSelect.addEventListener('change', applyFilters);
-    posSelect.addEventListener('change', applyFilters);
+    positionSelect.addEventListener('change', applyFilters);
 
     btnClear.addEventListener('click', () => {
         searchInput.value = '';
         teamSelect.value = '';
-        posSelect.value = '';
-        renderList(players);
+        positionSelect.value = '';
+        applyFilters();
     });
 
-    btnNew.addEventListener('click', () => modal.classList.remove('hidden'));
-    btnCancel.addEventListener('click', () => modal.classList.add('hidden'));
+    applyFilters();
+
+    // Controles interactivos del Carrusel de Jugadores Destacados
+    const carouselTrack = container.querySelector('#featured-carousel-track');
+    const btnCarouselPrev = container.querySelector('#btn-carousel-prev');
+    const btnCarouselNext = container.querySelector('#btn-carousel-next');
+
+    if (carouselTrack && btnCarouselPrev && btnCarouselNext) {
+        btnCarouselPrev.addEventListener('click', () => {
+            carouselTrack.scrollBy({ left: -240, behavior: 'smooth' });
+        });
+        btnCarouselNext.addEventListener('click', () => {
+            carouselTrack.scrollBy({ left: 240, behavior: 'smooth' });
+        });
+    }
+
+    setupPlayerModal(container, teams, activeLeague.id, () => renderPlayersView(container));
+}
+
+function getPlayerAvatarHTML(player, size = '50px') {
+    if (player.photo) {
+        return `<img src="${player.photo}" alt="${player.name}" style="width: ${size}; height: ${size}; border-radius: 50%; object-fit: cover; border: 2px solid #3b82f6;" />`;
+    }
+    
+    return `
+        <div style="width: ${size}; height: ${size}; border-radius: 50%; background: #3b82f6; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1rem; flex-shrink: 0;">
+            #${player.number || '👤'}
+        </div>
+    `;
+}
+
+/**
+ * Carrusel de Jugadores Destacados (Selección aleatoria de 6 a 8 jugadores)
+ */
+function renderFeaturedSliderHTML(players, teamMap) {
+    if (!players || players.length === 0) return '';
+
+    // Seleccionar entre 6 y 8 jugadores al azar (o todos si hay menos de 6)
+    const count = Math.min(Math.floor(Math.random() * 3) + 6, players.length);
+    const shuffled = [...players].sort(() => 0.5 - Math.random());
+    const featured = shuffled.slice(0, count);
+
+    return `
+        <div class="featured-carousel-container">
+            <div class="featured-carousel-header">
+                <div class="featured-carousel-title">
+                    <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>⭐</span> Jugadores Destacados
+                    </h3>
+                    <span class="featured-badge">${featured.length} Destacados</span>
+                </div>
+                <div class="carousel-controls">
+                    <button id="btn-carousel-prev" class="carousel-nav-btn" title="Anterior">&lt;</button>
+                    <button id="btn-carousel-next" class="carousel-nav-btn" title="Siguiente">&gt;</button>
+                </div>
+            </div>
+
+            <div id="featured-carousel-track" class="featured-carousel-track">
+                ${featured.map(p => `
+                    <a href="#player/${p.id}" class="featured-card">
+                        <div class="featured-avatar-wrapper">
+                            ${getPlayerAvatarHTML(p, '65px')}
+                            <span class="featured-dorsal-tag">#${p.number || '0'}</span>
+                        </div>
+                        <h4 class="featured-player-name" title="${p.name}">${p.name}</h4>
+                        <p class="featured-player-team" title="${teamMap.get(Number(p.teamId)) || 'Sin Equipo'}">
+                            ${teamMap.get(Number(p.teamId)) || 'Sin Equipo'}
+                        </p>
+                        <div class="featured-stats-bar">
+                            <div class="featured-stat-item">
+                                <span style="font-size: 0.7rem; color: #94a3b8;">Posición</span>
+                                <span class="featured-stat-value">${p.position || 'Jugador'}</span>
+                            </div>
+                            <div class="featured-stat-item">
+                                <span style="font-size: 0.7rem; color: #94a3b8;">Goles</span>
+                                <span class="featured-stat-value">${p.stats?.goals || 0}</span>
+                            </div>
+                        </div>
+                    </a>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Lista de Top Anotadores
+ */
+function renderTopScorersHTML(players, teamMap) {
+    const topScorers = [...players]
+        .sort((a, b) => ((b.stats?.goals || 0) - (a.stats?.goals || 0)))
+        .slice(0, 5);
+
+    return `
+        <div class="glass-panel" style="padding: 1.5rem; border-radius: 12px; background: rgba(30, 41, 59, 0.7);">
+            <h3 style="margin-top: 0; margin-bottom: 1rem;">🔥 Jugadores con más Anotaciones</h3>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                ${topScorers.map((p, index) => `
+                    <a href="#player/${p.id}" class="clickable-card" style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid #334155; text-decoration: none; color: inherit;">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span style="font-weight: bold; width: 20px; color: ${index === 0 ? '#f59e0b' : index === 1 ? '#94a3b8' : '#b45309'};">
+                                #${index + 1}
+                            </span>
+                            ${getPlayerAvatarHTML(p, '40px')}
+                            <div>
+                                <strong style="color: #f8fafc; font-size: 0.95rem;">${p.name}</strong>
+                                <span style="display: block; font-size: 0.8rem; color: #64748b;">${teamMap.get(Number(p.teamId)) || 'Sin Equipo'}</span>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <span style="font-size: 1.2rem; font-weight: bold; color: #10b981;">${p.stats?.goals || 0}</span>
+                            <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Goles</span>
+                        </div>
+                    </a>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function renderPlayerCards(container, players, teamMap) {
+    if (players.length === 0) {
+        container.innerHTML = `<p class="text-muted" style="grid-column: 1 / -1; text-align: center; padding: 2rem;">No se encontraron jugadores que coincidan con la búsqueda.</p>`;
+        return;
+    }
+
+    container.innerHTML = players.map(p => `
+        <a href="#player/${p.id}" class="glass-card clickable-card" style="padding: 1rem; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid #334155; display: flex; flex-direction: column; justify-content: space-between; text-decoration: none; color: inherit; cursor: pointer;">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    ${getPlayerAvatarHTML(p, '45px')}
+                    <span style="background: #3b82f6; color: white; padding: 0.2rem 0.5rem; border-radius: 6px; font-weight: bold; font-size: 0.8rem;">
+                        #${p.number || '0'}
+                    </span>
+                </div>
+                <h4 style="margin: 0.25rem 0; color: #f8fafc; font-size: 1rem;">${p.name}</h4>
+                <p style="margin: 0; font-size: 0.85rem; color: #64748b;">${teamMap.get(Number(p.teamId)) || 'Sin equipo'}</p>
+            </div>
+            <div style="margin-top: 1rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8;">
+                <span>Pos: <strong style="color: #60a5fa;">${p.position || 'N/A'}</strong></span>
+                <span>Goles: <strong style="color: #f8fafc;">${p.stats?.goals || 0}</strong></span>
+            </div>
+        </a>
+    `).join('');
+}
+
+function setupPlayerModal(container, teams, activeLeagueId, onSuccess) {
+    let modalOverlay = document.getElementById('player-modal-overlay');
+    if (!modalOverlay) {
+        modalOverlay = document.createElement('div');
+        modalOverlay.id = 'player-modal-overlay';
+        modalOverlay.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px);
+            display: none; justify-content: center; align-items: center; z-index: 1000;
+        `;
+        document.body.appendChild(modalOverlay);
+    }
+
+    modalOverlay.innerHTML = `
+        <div class="glass-panel" style="width: 100%; max-width: 450px; padding: 2rem; border-radius: 12px; background: rgba(30, 41, 59, 0.95); box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+            <h2 style="margin-top: 0; margin-bottom: 1.5rem; text-align: center;">Nuevo Jugador</h2>
+            
+            <form id="form-new-player">
+                <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 1.5rem;">
+                    <label for="player-photo-input" style="cursor: pointer; text-align: center;">
+                        <div id="photo-preview" style="width: 100px; height: 100px; border-radius: 50%; background: #334155; border: 2px dashed #64748b; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 0.5rem; transition: border-color 0.2s;">
+                            <span style="color: #94a3b8; font-size: 2rem;">📷</span>
+                        </div>
+                        <span style="font-size: 0.85rem; color: #60a5fa; text-decoration: underline;">Subir Foto</span>
+                    </label>
+                    <input type="file" id="player-photo-input" accept="image/*" style="display: none;" />
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem;">Nombre Completo *</label>
+                    <input type="text" id="player-name" class="form-control" required placeholder="Ej. Lionel Messi" style="width: 100%; box-sizing: border-box;" />
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem;">Dorsal (Número)</label>
+                        <input type="number" id="player-number" class="form-control" placeholder="Ej. 10" style="width: 100%; box-sizing: border-box;" />
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem;">Posición</label>
+                        <select id="player-position" class="form-control" style="width: 100%; box-sizing: border-box;">
+                            <option value="Delantero">Delantero</option>
+                            <option value="Mediocampista">Mediocampista</option>
+                            <option value="Defensa">Defensa</option>
+                            <option value="Portero">Portero</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem;">Equipo *</label>
+                    <select id="player-team" class="form-control" required style="width: 100%; box-sizing: border-box;">
+                        <option value="" disabled selected>Selecciona un equipo...</option>
+                        ${teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" id="btn-cancel-player" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Jugador</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    const fileInput = document.getElementById('player-photo-input');
+    const photoPreview = document.getElementById('photo-preview');
+    let base64Image = null;
+
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                base64Image = event.target.result;
+                photoPreview.innerHTML = `<img src="${base64Image}" style="width: 100%; height: 100%; object-fit: cover;" alt="Preview" />`;
+                photoPreview.style.borderStyle = 'solid';
+                photoPreview.style.borderColor = '#3b82f6';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    const btnOpen = container.querySelector('#btn-new-player');
+    const btnCancel = document.getElementById('btn-cancel-player');
+    const form = document.getElementById('form-new-player');
+
+    btnOpen.addEventListener('click', () => {
+        form.reset();
+        base64Image = null;
+        photoPreview.innerHTML = '<span style="color: #94a3b8; font-size: 2rem;">📷</span>';
+        photoPreview.style.borderStyle = 'dashed';
+        photoPreview.style.borderColor = '#64748b';
+        modalOverlay.style.display = 'flex';
+    });
+
+    const closeModal = () => {
+        modalOverlay.style.display = 'none';
+    };
+
+    btnCancel.addEventListener('click', closeModal);
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) closeModal();
+    });
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData(e.target);
+        
         const newPlayer = {
-            name: formData.get('name'),
-            photo: formData.get('photo'),
-            teamId: Number(formData.get('teamId')),
-            position: formData.get('position'),
-            number: Number(formData.get('number')),
-            stats: { matchesPlayed: 0, goals: 0 }
+            name: document.getElementById('player-name').value.trim(),
+            number: document.getElementById('player-number').value,
+            teamId: document.getElementById('player-team').value,
+            leagueId: activeLeagueId,
+            position: document.getElementById('player-position').value,
+            photo: base64Image
         };
 
         try {
             await createPlayer(newPlayer);
-            modal.classList.add('hidden');
-            window.location.reload();
-        } catch (err) {
-            alert('Error al registrar jugador: ' + err.message);
+            closeModal();
+            if (typeof onSuccess === 'function') onSuccess();
+        } catch (error) {
+            console.error("Error al guardar jugador:", error);
+            alert("Ocurrió un error al guardar el jugador.");
         }
     });
 }

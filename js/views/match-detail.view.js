@@ -220,7 +220,7 @@ export async function renderMatchDetail(container, params) {
             const calcAwayScore = currentEvents.filter(ev => ev.teamId === awayTeam.id).length;
 
             let winnerId = null;
-            const isKnockout = activeLeague.mode === 'eliminacion' || activeLeague.modality === 'knockout';
+            const isKnockout = activeLeague.mode === 'eliminacion' || activeLeague.mode === 'doble-eliminacion' || activeLeague.modality === 'knockout';
 
             if (isKnockout && calcHomeScore === calcAwayScore) {
                 const pickWinner = prompt(`El partido terminó en empate (${calcHomeScore}-${calcAwayScore}). Al ser eliminación directa, declare el ganador escribiendo el nombre del equipo clasificado (${homeTeam.name} o ${awayTeam.name}):`);

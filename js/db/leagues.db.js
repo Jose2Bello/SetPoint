@@ -68,7 +68,7 @@ export function createLeague(league) {
             sport: league.sport,
             mode: league.mode, // 'liga' o 'eliminacion'
             rounds: league.mode === 'liga' ? (league.rounds || '1') : null,
-            bracketTeamsCount: league.mode === 'eliminacion' ? Number(league.bracketTeamsCount) : null,
+            bracketTeamsCount: (league.mode === 'eliminacion' || league.mode === 'doble-eliminacion') ? Number(league.bracketTeamsCount) : null,
             season: league.season.trim(),
             description: (league.description || '').trim(),
             isActive: false,

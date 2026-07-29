@@ -1,10 +1,10 @@
 import { renderDashboard } from './views/dashboard.view.js';
 import { renderLeagues } from './views/leagues.view.js';
 import { renderTeams } from './views/teams.view.js';
- import { renderTeamDetail } from './views/team-detail.view.js';
+import { renderTeamDetail } from './views/team-detail.view.js';
 import { renderMatches } from './views/matches.view.js';
 import { renderMatchDetail } from './views/match-detail.view.js';
-import { renderPlayers } from './views/players.view.js';
+import { renderPlayersView } from './views/players.view.js'; 
 import { renderPlayerDetail } from './views/player-detail.view.js';
 import { renderStats } from './views/stats-view.js';
 
@@ -15,7 +15,7 @@ const routes = {
     'team': renderTeamDetail,
     'matches': renderMatches,
     'match': renderMatchDetail,      
-    'players': renderPlayers,
+    'players': renderPlayersView, 
     'player': renderPlayerDetail,   
     'stats': renderStats
 };
