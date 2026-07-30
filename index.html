@@ -17,19 +17,15 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <league-navbar></league-navbar>
     
-    <main id="app">
-   
+    <div id="app-loader" style="position: fixed; inset: 0; background: var(--color-bg, #0b0f19); display: flex; align-items: center; justify-content: center; z-index: 9999;">
         <loading-state></loading-state>
-    </main>
-    
-   
-    
-
-    <confirm-dialog></confirm-dialog>
-    <toast-notification></toast-notification>
-
+    </div>
+    <div id="app-wrapper" style="display: none;">
+        <league-navbar></league-navbar>
+        <main id="app"></main>
+        <league-footer></league-footer>
+    </div>
 
     <script type="module" src="js/app.js"></script>
 </body>
