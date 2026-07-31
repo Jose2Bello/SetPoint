@@ -47,21 +47,16 @@ export function createTeam(team) {
         const store = tx.objectStore('teams');
         
         const data = {
-            leagueId: Number(team.leagueId),
+            leagueId: Number(team.leagueId) || null,
+            discipline: (team.discipline || team.sport || 'futbol').toLowerCase(),
             name: team.name.trim(),
-            logo: team.logo || '',
+            logo: team.logo || team.shield || '', 
             primaryColor: team.primaryColor || '#3b82f6',
             secondaryColor: team.secondaryColor || '#1e3a8a',
             city: (team.city || '').trim(),
-            stats: {
-                played: 0,
-                won: 0,
-                drawn: 0,
-                lost: 0,
-                goalsFor: 0,
-                goalsAgainst: 0,
-                goalsDiff: 0,
-                points: 0
+            stats: team.stats || {
+                played: 0, won: 0, drawn: 0, lost: 0,
+                goalsFor: 0, goalsAgainst: 0, goalsDiff: 0, points: 0
             },
             createdAt: new Date().toISOString()
         };
@@ -93,7 +88,10 @@ export function updateTeam(id, teamUpdate) {
             }
             
             data.name = teamUpdate.name.trim();
-            data.logo = teamUpdate.logo || '';
+            // Soporta 'logo' o 'shield' al actualizar
+            data.logo = teamUpdate.logo !== undefined 
+                ? teamUpdate.logo 
+                : (teamUpdate.shield !== undefined ? teamUpdate.shield : data.logo || '');
             data.primaryColor = teamUpdate.primaryColor;
             data.secondaryColor = teamUpdate.secondaryColor;
             data.city = (teamUpdate.city || '').trim();

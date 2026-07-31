@@ -1,3 +1,4 @@
+/* js/views/teams.view.js */
 import { teamsDb } from '../db/teams.db.js';
 import { playersDb } from '../db/players.db.js';
 import { matchesDb } from '../db/matches.db.js';
@@ -10,6 +11,14 @@ const SPORT_KEYS = Object.keys(SPORTS || {});
 
 const DEFAULT_SHIELD = 'assets/no-image.webp';
 const UPLOAD_ICON = 'assets/upload-icon.png';
+
+/**
+ * Función auxiliar para obtener la disciplina/deporte de un equipo
+ * dando soporte a 'sport' o 'discipline'
+ */
+function getTeamSport(team) {
+    return (team.sport || team.discipline || 'futbol').toLowerCase();
+}
 
 export async function renderTeams(container) {
     const footer = document.querySelector('footer');
@@ -37,7 +46,9 @@ export async function renderTeams(container) {
         return { ...team, playerCount: players.length };
     }));
 
-    const initialSportFilter = activeLeague?.sport || SPORT_KEYS[0] || 'futbol';
+    // Determina el deporte por defecto basándose en la liga o la primera clave disponible
+    const leagueSport = activeLeague?.sport || activeLeague?.discipline;
+    const initialSportFilter = (leagueSport || SPORT_KEYS[0] || 'futbol').toLowerCase();
 
     renderListView(container, teamsWithPlayerCount, activeLeagueId, initialSportFilter);
 }
@@ -46,7 +57,8 @@ function renderListView(container, teams, activeLeagueId, initialSportFilter) {
     let currentSportFilter = initialSportFilter;
 
     const render = () => {
-        const filteredTeams = teams.filter(t => (t.sport || 'futbol') === currentSportFilter);
+        // Filtra los equipos comparando la disciplina/deporte de forma normalizada
+        const filteredTeams = teams.filter(t => getTeamSport(t) === currentSportFilter);
 
         container.innerHTML = `
             <div class="teams-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
@@ -60,12 +72,15 @@ function renderListView(container, teams, activeLeagueId, initialSportFilter) {
             <!-- NAVEGACIÓN POR PESTAÑAS (DEPORTES) -->
             <div class="sports-tabs-bar" style="display: flex; gap: 0.5rem; overflow-x: auto; margin-bottom: 1.5rem; padding-bottom: 0.5rem;">
                 ${SPORT_KEYS.map(key => {
+                    const sportKeyNormalized = key.toLowerCase();
                     const sportData = SPORTS[key] || { name: key, icon: '🏆' };
-                    const count = teams.filter(t => (t.sport || 'futbol') === key).length;
-                    const isActive = key === currentSportFilter;
+                    
+                    // Cuenta los equipos asociados a esta disciplina
+                    const count = teams.filter(t => getTeamSport(t) === sportKeyNormalized).length;
+                    const isActive = sportKeyNormalized === currentSportFilter;
 
                     return `
-                        <button type="button" class="tab-btn ${isActive ? 'active' : ''}" data-sport="${key}" style="
+                        <button type="button" class="tab-btn ${isActive ? 'active' : ''}" data-sport="${sportKeyNormalized}" style="
                             display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1rem; border-radius: 8px;
                             border: none; cursor: pointer; font-weight: 500; white-space: nowrap; transition: all 0.2s ease;
                             background: ${isActive ? '#3b82f6' : 'rgba(255, 255, 255, 0.05)'};
@@ -106,8 +121,6 @@ function renderListView(container, teams, activeLeagueId, initialSportFilter) {
 }
 
 function renderTeamCard(team) {
-    console.log(`Tarjeta de [${team.name}] - Logo recibido de BD:`, team.logo ? team.logo.substring(0, 30) + '...' : 'VACÍO O INDEFINIDO');
-
     const shieldUrl = (team.logo && team.logo.trim() !== '') ? team.logo : DEFAULT_SHIELD;
     const primaryColor = team.primaryColor || '#3b82f6';
     const secondaryColor = team.secondaryColor || '#1e293b';
@@ -151,13 +164,16 @@ function setupListEventListeners(container, activeLeagueId, currentSportFilter, 
     });
 
     container.addEventListener('click', async (e) => {
-        const id = Number(e.target.dataset.id);
+        const btn = e.target.closest('button');
+        if (!btn) return;
+
+        const id = Number(btn.dataset.id);
         if (!id) return;
 
-        if (e.target.classList.contains('btn-edit-team')) {
+        if (btn.classList.contains('btn-edit-team')) {
             const team = await teamsDb.getById(id);
             if (team) renderFormView(container, activeLeagueId, team, currentSportFilter);
-        } else if (e.target.classList.contains('btn-delete-team')) {
+        } else if (btn.classList.contains('btn-delete-team')) {
             const leagueMatches = await matchesDb.getByLeague(activeLeagueId);
             const hasMatches = leagueMatches.some(m => m.homeTeamId === id || m.awayTeamId === id);
 
@@ -181,7 +197,7 @@ function setupListEventListeners(container, activeLeagueId, currentSportFilter, 
 function renderFormView(container, leagueId, teamToEdit = null, defaultSport = 'futbol') {
     const isEdit = !!teamToEdit;
     let processedImageBase64 = teamToEdit?.logo || '';
-    const selectedSport = teamToEdit?.sport || defaultSport;
+    const selectedSport = getTeamSport(teamToEdit || { sport: defaultSport });
 
     container.innerHTML = `
       <div class="team-form-card" style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 1.5rem; max-width: 600px; margin: 0 auto 100px auto;">
@@ -215,11 +231,14 @@ function renderFormView(container, leagueId, teamToEdit = null, defaultSport = '
                     <div class="form-group">
                         <label class="label text-sm">Disciplina Deportiva</label>
                         <select name="sport" class="input" required style="width: 100%; box-sizing: border-box;">
-                            ${SPORT_KEYS.map(key => `
-                                <option value="${key}" ${key === selectedSport ? 'selected' : ''}>
-                                    ${SPORTS[key]?.icon || '🏆'} ${SPORTS[key]?.name || key}
-                                </option>
-                            `).join('')}
+                            ${SPORT_KEYS.map(key => {
+                                const keyNormalized = key.toLowerCase();
+                                return `
+                                    <option value="${keyNormalized}" ${keyNormalized === selectedSport ? 'selected' : ''}>
+                                        ${SPORTS[key]?.icon || '🏆'} ${SPORTS[key]?.name || key}
+                                    </option>
+                                `;
+                            }).join('')}
                         </select>
                     </div>
 
@@ -283,11 +302,13 @@ function renderFormView(container, leagueId, teamToEdit = null, defaultSport = '
         
         const currentPreviewSrc = previewImg.src;
         const finalLogo = currentPreviewSrc.includes('no-image') ? '' : currentPreviewSrc;
+        const selectedSportVal = formData.get('sport').toLowerCase();
 
         const teamData = {
             leagueId: Number(leagueId),
             name: formData.get('name').trim(),
-            sport: formData.get('sport'),
+            sport: selectedSportVal,
+            discipline: selectedSportVal, // Guardamos ambas claves para compatibilidad
             city: formData.get('city').trim(),
             primaryColor: formData.get('primaryColor'),
             secondaryColor: formData.get('secondaryColor'),

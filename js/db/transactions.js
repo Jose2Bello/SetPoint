@@ -561,18 +561,19 @@ export function importLeagueData(dump) {
                 return;
             }
             
-            teamsToImport.forEach(team => {
-                const oldTeamId = team.id;
-                const newTeamData = {
-                    leagueId: newLeagueId,
-                    name: team.name,
-                    shield: team.shield || '',
-                    primaryColor: team.primaryColor || '#3b82f6',
-                    secondaryColor: team.secondaryColor || '#1e3a8a',
-                    city: team.city || '',
-                    stats: team.stats || { played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalsDiff: 0, points: 0 },
-                    createdAt: team.createdAt || new Date().toISOString()
-                };
+          teamsToImport.forEach(team => {
+            const oldTeamId = team.id;
+            const newTeamData = {
+                leagueId: newLeagueId,
+                name: team.name,
+        
+                logo: team.logo || team.shield || '', 
+                primaryColor: team.primaryColor || '#3b82f6',
+                secondaryColor: team.secondaryColor || '#1e3a8a',
+                city: team.city || '',
+                stats: team.stats || { played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalsDiff: 0, points: 0 },
+                createdAt: team.createdAt || new Date().toISOString()
+            };
                 
                 const teamAddReq = teamsStore.add(newTeamData);
                 teamAddReq.onsuccess = () => {
