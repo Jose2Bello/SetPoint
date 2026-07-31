@@ -60,33 +60,33 @@ class LeagueNavbar extends HTMLElement {
                 console.error('Error al obtener datos de la liga activa en Navbar:', e);
             }
         }
-
-        this.innerHTML = `
-        <header class="header-container">
-            <!-- 1. Marca (Izquierda) -->
-            <div class="nav-brand">
-                <a href="#dashboard" class="flex align-center gap-sm">
-                    <span class="brand-logo"></span>
-                    <span class="brand-title font-bold">SetPoint</span>
-                </a>
+this.innerHTML = `
+<header class="header-container">
+    <!-- 1. Marca con Logo en Imagen (Izquierda) -->
+    <div class="nav-brand">
+        <a href="#dashboard" class="brand-link flex align-center gap-sm">
+            <div class="logo-grid-container">
+                <img src="assets/setpointlogo.png" alt="SetPoint Logo" class="brand-logo-img" />
             </div>
-            
-            <!-- 2. Navegación (Centro) -->
-            <nav class="nav-links flex gap-md">
-                <a href="#dashboard" class="${this.activeRoute === 'dashboard' ? 'active' : ''}">Inicio</a>
-                <a href="#leagues" class="${this.activeRoute === 'leagues' ? 'active' : ''}">Ligas</a>
-                <a href="#teams" class="${this.activeRoute === 'teams' ? 'active' : ''}">Equipos</a>
-                <a href="#players" class="${this.activeRoute === 'players' ? 'active' : ''}">Jugadores</a>
-                <a href="#matches" class="${this.activeRoute === 'matches' ? 'active' : ''}">Partidos</a>
-                <a href="#stats" class="${this.activeRoute === 'stats' ? 'active' : ''}">Estadísticas</a>
-            </nav>
+        </a>
+    </div>
+    
+    <!-- 2. Navegación (Centro) -->
+    <nav class="nav-links flex gap-md">
+        <a href="#dashboard" class="${this.activeRoute === 'dashboard' ? 'active' : ''}">Inicio</a>
+        <a href="#leagues" class="${this.activeRoute === 'leagues' ? 'active' : ''}">Ligas</a>
+        <a href="#teams" class="${this.activeRoute === 'teams' ? 'active' : ''}">Equipos</a>
+        <a href="#players" class="${this.activeRoute === 'players' ? 'active' : ''}">Jugadores</a>
+        <a href="#matches" class="${this.activeRoute === 'matches' ? 'active' : ''}">Partidos</a>
+        <a href="#stats" class="${this.activeRoute === 'stats' ? 'active' : ''}">Estadísticas</a>
+    </nav>
 
-            <!-- 3. Información de Liga Activa (Derecha) -->
-            <div class="nav-league-info text-secondary font-medium">
-                ${leagueInfo}
-            </div>
-        </header>
-        `;
+    <!-- 3. Información de Liga Activa (Derecha) -->
+    <div class="nav-league-info text-secondary font-medium">
+        ${leagueInfo}
+    </div>
+</header>
+`;
     }
 }
 
