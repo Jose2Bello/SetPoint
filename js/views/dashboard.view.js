@@ -79,7 +79,7 @@ export async function renderDashboard(container) {
                 <!-- Próximo Partido -->
                 <div class="dashboard-card col-span-6">
                     <div class="dashboard-card-title">
-                        <span>📅 Próximo Partido</span>
+                        <span> Próximo Partido</span>
                         <a href="#matches" class="text-sm text-primary" style="font-size: 0.8rem;">Ver todos &rarr;</a>
                     </div>
                     ${renderMatchCard(nextMatch, teams, 'No hay partidos programados')}
@@ -88,7 +88,7 @@ export async function renderDashboard(container) {
                 <!-- Último Partido -->
                 <div class="dashboard-card col-span-6">
                     <div class="dashboard-card-title">
-                        <span>✅ Último Partido Finalizado</span>
+                        <span> Último Partido Finalizado</span>
                         <a href="#matches" class="text-sm text-primary" style="font-size: 0.8rem;">Ver todos &rarr;</a>
                     </div>
                     ${renderMatchCard(lastMatch, teams, 'No se ha jugado ningún partido')}
@@ -126,11 +126,6 @@ export async function renderDashboard(container) {
                         <canvas id="chartTimeline"></canvas>
                     </div>
                 </div>
-
-                <footer class="dashboard-footer">
-                    <p style="margin: 0;">© 2026 SetPoint. Desarrollado por Jose Lopez y Santiago Salas</p>
-                    <div>Estado DB: <span style="color: #10b981; font-weight: 700;">Conectado</span></div>
-                </footer>
             </div>
         </div>
     `;
