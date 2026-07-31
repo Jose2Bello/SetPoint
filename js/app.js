@@ -10,28 +10,38 @@ import './components/confirm-dialog.js';
 import './components/toast.js';
 import './components/footer.js';
 
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Set Visual Theme Class (Dark mode is default)
     const theme = storage.getTheme();
     document.body.classList.add(theme === 'light' ? 'light-theme' : 'dark-theme');
     
+    const appLoader = document.getElementById('app-loader');
+    const appWrapper = document.getElementById('app-wrapper');
+
     try {
-        // 2. Initialize Database connection FIRST
-        await initDB();
-        
-        // Carga diferida del Navbar tras garantizar la conexión a la base de datos
-        await import('./components/navbar.js');
-        
-        // Dispatch success status to database status badges
-        window.dispatchEvent(new CustomEvent('db-status-change', { detail: 'connected' }));
-        
-        // 3. Fetch active league and configure layout theme
-        await updateSportTheme();
-        
-        // 4. Start Router
-        const appContainer = document.getElementById('app');
-        router.init(appContainer);
-        
+        // Ejecutamos la inicialización REAL y los 2 segundos de retardo en PARALELO
+        await Promise.all([
+            (async () => {
+                // 2. Initialize Database connection FIRST
+                await initDB();
+                
+                // Carga diferida del Navbar tras garantizar la conexión a la base de datos
+                await import('./components/navbar.js');
+                
+                // Dispatch success status to database status badges
+                window.dispatchEvent(new CustomEvent('db-status-change', { detail: 'connected' }));
+                
+                // 3. Fetch active league and configure layout theme
+                await updateSportTheme();
+                
+                // 4. Start Router
+                const appContainer = document.getElementById('app');
+                router.init(appContainer);
+            })(),
+            wait(2000) // FORZAR 2 SEGUNDOS MÍNIMOS
+        ]);
+
     } catch (error) {
         console.error('Error initializing LeagueHub application:', error);
         window.dispatchEvent(new CustomEvent('db-status-change', { detail: 'error' }));
@@ -52,9 +62,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
         }
+    } finally {
+        if (appLoader) appLoader.style.display = 'none';
+        if (appWrapper) appWrapper.style.display = 'block';
     }
 });
-
 /**
  * Reads active league from storage and updates body sport class for styling.
  */

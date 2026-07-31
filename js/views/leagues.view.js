@@ -7,6 +7,7 @@ import { transactions } from '../db/transactions.js';
 import { bracketService } from '../services/bracket.service.js';
 import { storage } from '../utils/storage.js';
 import { getSportConfig } from '../sports-terms.js';
+import { confirmAction } from '../components/confirm-dialog.js';
 
 export async function renderLeagues(container) {
     const leagues = await leaguesDb.getAll();
@@ -121,10 +122,10 @@ function setupListEventListeners(container) {
                 throw new Error('El archivo JSON no tiene la estructura de una liga válida.');
             }
             await transactions.importLeagueData(data);
-            alert('¡Liga importada con éxito!');
+        toast.success('¡Liga importada con éxito!');
             renderLeagues(container);
         } catch (err) {
-            alert(`Error al importar: ${err.message}`);
+          toast.error('No se puede eliminar este equipo porque ya tiene partidos registrados.');
         }
     });
 }
@@ -385,15 +386,15 @@ function showAddMatchModal(leagueId, teams, onSuccess) {
         e.preventDefault();
         const homeId = Number(overlay.querySelector('#addMatchHome').value);
         const awayId = Number(overlay.querySelector('#addMatchAway').value);
-        if (!homeId || !awayId) { alert('Selecciona ambos equipos.'); return; }
-        if (homeId === awayId) { alert('Un equipo no puede jugar contra sí mismo.'); return; }
+        if (!homeId || !awayId) { toast.error('Selecciona ambos equipos.'); return; }
+        if (homeId === awayId) { toast.error('Un equipo no puede jugar contra sí mismo.'); return; }
         const date = overlay.querySelector('#addMatchDate').value;
         const round = overlay.querySelector('#addMatchRound').value.trim();
         try {
             await matchesDb.create({ leagueId, homeTeamId: homeId, awayTeamId: awayId, date: date || null, status: 'Programado', round: round || null });
             closeModal();
             if (typeof onSuccess === 'function') onSuccess();
-        } catch (err) { alert('Error al guardar partido: ' + err.message); }
+        } catch (err) { toast.error('Error al guardar partido: ' + err.message); }
     });
 }
 
