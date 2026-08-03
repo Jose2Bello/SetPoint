@@ -78,9 +78,10 @@ export async function renderStats(container) {
     const h1 = document.createElement('h1');
     h1.textContent = 'Estadísticas y Análisis';
     const pSub = document.createElement('p');
-    pSub.textContent = `Resumen general para la liga: `;
+    pSub.textContent = 'Resumen general de la liga: ';
     const strongLeague = document.createElement('strong');
-    strongLeague.textContent = activeLeague.name;
+    strongLeague.textContent = `${sportConfig.icon} ${activeLeague.name}`;
+    strongLeague.style.color = '#f8fafc';
     pSub.appendChild(strongLeague);
     headerDiv.appendChild(h1);
     headerDiv.appendChild(pSub);

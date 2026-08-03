@@ -60,11 +60,32 @@ export async function renderMatchDetail(container, params) {
     const teamsRow = document.createElement('div');
     teamsRow.className = 'match-teams-display';
 
-    const homeDiv = document.createElement('div');
-    homeDiv.className = 'team-box';
-    const hName = document.createElement('h2');
-    hName.textContent = homeTeam ? homeTeam.name : 'Por definir';
-    homeDiv.appendChild(hName);
+    const buildTeamBox = (team, players) => {
+        const box = document.createElement('div');
+        box.className = 'team-box';
+
+        const avatar = document.createElement('div');
+        avatar.className = 'team-avatar-lg';
+        avatar.textContent = team ? team.name.substring(0, 2).toUpperCase() : '?';
+        box.appendChild(avatar);
+
+        const name = document.createElement('h2');
+        name.className = 'team-name';
+        name.textContent = team ? team.name : 'Por definir';
+        box.appendChild(name);
+
+        const meta = document.createElement('p');
+        meta.className = 'team-sub';
+        meta.textContent = team
+            ? `${team.city || 'Sede no especificada'} · ${players.length} jugador${players.length === 1 ? '' : 'es'}`
+            : 'Equipo por definir';
+        box.appendChild(meta);
+
+        return box;
+    };
+
+    const homeDiv = buildTeamBox(homeTeam, homePlayers);
+    const awayDiv = buildTeamBox(awayTeam, awayPlayers);
 
     const scoreDiv = document.createElement('div');
     scoreDiv.className = 'score-box';
@@ -88,22 +109,32 @@ export async function renderMatchDetail(container, params) {
     bigScoreSpan.textContent = `${displayHomeScore} - ${displayAwayScore}`;
     scoreDiv.appendChild(bigScoreSpan);
 
+    const statusKey = String(match.status || 'Programado').toLowerCase().replace(/\s+/g, '-');
     const statusBadge = document.createElement('span');
-    statusBadge.className = `badge status-${match.status}`;
+    statusBadge.className = `badge status-${statusKey}`;
     statusBadge.textContent = isFinished ? 'Finalizado' : (events.length > 0 ? 'En Juego' : 'Programado');
     scoreDiv.appendChild(statusBadge);
 
-    const awayDiv = document.createElement('div');
-    awayDiv.className = 'team-box';
-    const aName = document.createElement('h2');
-    aName.textContent = awayTeam ? awayTeam.name : 'Por definir';
-    awayDiv.appendChild(aName);
+    const metaParts = [];
+    if (match.round) metaParts.push(`Ronda: ${match.round}`);
+    if (match.date) metaParts.push(new Date(match.date).toLocaleString());
+    if (metaParts.length > 0) {
+        const matchMeta = document.createElement('div');
+        matchMeta.className = 'match-meta';
+        matchMeta.textContent = metaParts.join(' · ');
+        scoreDiv.appendChild(matchMeta);
+    }
 
     teamsRow.appendChild(homeDiv);
     teamsRow.appendChild(scoreDiv);
     teamsRow.appendChild(awayDiv);
     header.appendChild(teamsRow);
     container.appendChild(header);
+
+    // Cuerpo de la vista: cada sección va en su propio contenedor
+    const body = document.createElement('div');
+    body.className = 'match-detail-body';
+    container.appendChild(body);
 
     // Infractions configuration for active sport
     const infractions = sportConfig.infractions || [
@@ -224,7 +255,7 @@ export async function renderMatchDetail(container, params) {
         actionsBar.appendChild(btnFinalize);
         controlPanel.appendChild(actionsBar);
 
-        container.appendChild(controlPanel);
+        body.appendChild(controlPanel);
 
         const updatePlayersOptions = (isHome) => {
             playerSelect.textContent = '';
@@ -330,13 +361,7 @@ export async function renderMatchDetail(container, params) {
         list.className = 'events-list';
         events.forEach(ev => {
             const li = document.createElement('li');
-            li.style.display = 'flex';
-            li.style.alignItems = 'center';
-            li.style.justifyContent = 'space-between';
-            li.style.padding = '0.5rem 0.75rem';
-            li.style.marginBottom = '0.35rem';
-            li.style.background = 'rgba(15, 23, 42, 0.4)';
-            li.style.borderRadius = '8px';
+            li.className = 'event-item';
 
             const player = allPlayersMap.get(Number(ev.playerId));
             const playerName = player ? `#${player.number} - ${player.name}` : `Jugador ID ${ev.playerId}`;
@@ -348,15 +373,15 @@ export async function renderMatchDetail(container, params) {
                 : 'badge-success';
 
             const infoSpan = document.createElement('span');
+            infoSpan.className = 'event-info';
             infoSpan.innerHTML = `<strong>Min ${ev.minute || 'S/N'}</strong>: <span class="badge ${badgeClass}">${ev.type}</span> <strong>${playerName}</strong> (${teamName})`;
 
             li.appendChild(infoSpan);
 
             if (!isFinished) {
                 const btnDel = document.createElement('button');
-                btnDel.className = 'btn-sm btn-danger';
+                btnDel.className = 'btn btn-sm btn-danger';
                 btnDel.textContent = '✖';
-                btnDel.style.marginLeft = '1rem';
                 btnDel.addEventListener('click', async () => {
                     try {
                         await deleteMatchEvent(ev.id);
@@ -372,7 +397,7 @@ export async function renderMatchDetail(container, params) {
         });
         eventsContainer.appendChild(list);
     }
-    container.appendChild(eventsContainer);
+    body.appendChild(eventsContainer);
 
     // Botón Deshacer si está finalizado
     if (isFinished) {
@@ -394,6 +419,6 @@ export async function renderMatchDetail(container, params) {
             }
         });
         undoContainer.appendChild(btnUndo);
-        container.appendChild(undoContainer);
+        body.appendChild(undoContainer);
     }
 }
