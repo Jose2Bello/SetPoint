@@ -5,6 +5,8 @@ import { matchesDb } from '../db/matches.db.js';
 import { leaguesDb } from '../db/leagues.db.js';
 import { storage } from '../utils/storage.js';
 import { SPORTS } from '../sports-terms.js';
+import { toast } from '../components/toast.js';
+import { confirmAction } from '../components/confirm-dialog.js';
 
 // Obtenemos las claves directamente del objeto SPORTS
 const SPORT_KEYS = Object.keys(SPORTS || {});
@@ -178,16 +180,18 @@ function setupListEventListeners(container, activeLeagueId, currentSportFilter, 
             const hasMatches = leagueMatches.some(m => m.homeTeamId === id || m.awayTeamId === id);
 
             if (hasMatches) {
-                alert('⚠️ No se puede eliminar este equipo porque ya tiene partidos registrados.');
+                toast.warning('No se puede eliminar este equipo porque ya tiene partidos registrados.');
                 return;
             }
 
-            if (confirm('¿Estás seguro de eliminar este equipo? Se eliminarán también sus jugadores asociados.')) {
+            const confirmed = await confirmAction('Eliminar Equipo', '¿Estás seguro de eliminar este equipo? Se eliminarán también sus jugadores asociados.');
+            if (confirmed) {
                 const players = await playersDb.getByTeam(id);
                 for (const player of players) {
                     await playersDb.delete(player.id);
                 }
                 await teamsDb.delete(id);
+                toast.success('Equipo eliminado con éxito');
                 renderTeams(container);
             }
         }
@@ -319,14 +323,16 @@ function renderFormView(container, leagueId, teamToEdit = null, defaultSport = '
         const duplicate = existingTeams.find(t => t.name.toLowerCase() === teamData.name.toLowerCase() && t.id !== teamToEdit?.id);
         
         if (duplicate) {
-            alert('⚠️ Ya existe un equipo con ese nombre en esta liga.');
+            toast.warning('Ya existe un equipo con ese nombre en esta liga.');
             return;
         }
 
         if (isEdit) {
             await teamsDb.update(teamToEdit.id, teamData);
+            toast.success('Equipo actualizado con éxito');
         } else {
             await teamsDb.create(teamData);
+            toast.success('Equipo creado con éxito');
         }
 
         renderTeams(container);

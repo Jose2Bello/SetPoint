@@ -3,6 +3,7 @@ import { getAllPlayers, createPlayer } from '../db/players.db.js';
 import { getTeamsByLeague } from '../db/teams.db.js';
 import { getActiveLeague } from '../db/leagues.db.js';
 import { initDB } from '../db/connection.js';
+import { toast } from '../components/toast.js';
 
 export async function renderPlayersView(container) {
     container.innerHTML = '<div class="loading-state"><p>Cargando atletas...</p></div>';
@@ -377,11 +378,12 @@ function setupPlayerModal(container, teams, activeLeagueId, onSuccess) {
 
         try {
             await createPlayer(newPlayer);
+            toast.success('Jugador registrado con éxito');
             closeModal();
             if (typeof onSuccess === 'function') onSuccess();
         } catch (error) {
             console.error("Error al guardar jugador:", error);
-            alert("Ocurrió un error al guardar el jugador.");
+            toast.error("Ocurrió un error al guardar el jugador.");
         }
     });
 }

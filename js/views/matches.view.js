@@ -2,6 +2,12 @@
 import { getActiveLeague } from '../db/leagues.db.js';
 import { getTeamsByLeague } from '../db/teams.db.js';
 import { getAllMatches, createMatch, updateMatch } from '../db/matches.db.js';
+import { getPlayersByTeam } from '../db/players.db.js';
+import { getEventsByMatch, createMatchEvent, deleteMatchEvent } from '../db/events.db.js';
+import { finalizeMatch, undoMatch } from '../db/transactions.js';
+import { getSportConfig } from '../sports-terms.js';
+import { toast } from '../components/toast.js';
+import { confirmAction } from '../components/confirm-dialog.js';
 
 export async function renderMatches(container) {
     container.innerHTML = `
@@ -28,6 +34,7 @@ export async function renderMatches(container) {
 }
 
 function render(container, activeLeague, teams, matches) {
+    const sportConfig = getSportConfig(activeLeague.sport);
     const teamMap = new Map(teams.map(t => [Number(t.id), t]));
     const isLeagueMode = activeLeague.mode === 'liga' || activeLeague.modality === 'league';
 
@@ -46,28 +53,15 @@ function render(container, activeLeague, teams, matches) {
         return 'Programado';
     };
 
-    // Group matches by round or date
-    const grouped = {};
-    matches.forEach(m => {
-        let key;
-        if (m.round) {
-            key = `Jornada ${m.round}`;
-        } else if (m.date) {
-            key = new Date(m.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-        } else {
-            key = 'Sin Fecha Asignada';
-        }
-        if (!grouped[key]) grouped[key] = [];
-        grouped[key].push(m);
-    });
+    const isInfraction = (type) => {
+        if (!type) return false;
+        const lower = String(type).toLowerCase();
+        return lower.includes('tarjeta') || lower.includes('falta') || lower.includes('amarilla') || lower.includes('roja') || lower.includes('técnica') || lower.includes('expulsi');
+    };
 
-    const groupKeys = Object.keys(grouped);
-
-    // Stats summary
     const total = matches.length;
     const finished = matches.filter(m => m.status === 'Finalizado' || m.status === 'finished').length;
     const scheduled = matches.filter(m => m.status === 'Programado' || m.status === 'scheduled').length;
-    const inProgress = total - finished - scheduled;
 
     container.innerHTML = `
         <div class="matches-view-wrapper" style="display: flex; flex-direction: column; gap: 1.5rem;">
@@ -122,7 +116,7 @@ function render(container, activeLeague, teams, matches) {
             <div id="matchesListContainer"></div>
         </div>
 
-        <!-- Add Match Modal (Liga mode only) -->
+        <!-- Programar Partido Modal (Liga mode) -->
         ${isLeagueMode ? `
         <div id="addMatchModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.88); backdrop-filter:blur(4px); z-index:1000; align-items:center; justify-content:center;">
             <div class="glass-panel" style="width:100%; max-width:480px; padding:1.75rem; border-radius:14px; background:rgba(30,41,59,0.97); box-shadow:0 16px 48px rgba(0,0,0,0.6);">
@@ -163,42 +157,85 @@ function render(container, activeLeague, teams, matches) {
         </div>
         ` : ''}
 
-        <!-- Edit Result Modal -->
+        <!-- MODAL UNIFICADO DE GESTIÓN DE PARTIDO -->
         <div id="editMatchModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.88); backdrop-filter:blur(4px); z-index:1000; align-items:center; justify-content:center;">
-            <div class="glass-panel" style="width:100%; max-width:460px; padding:1.75rem; border-radius:14px; background:rgba(30,41,59,0.97); box-shadow:0 16px 48px rgba(0,0,0,0.6);">
-                <h3 id="editMatchTitle" style="margin-top:0; text-align:center; color:#f8fafc; font-size:1.1rem;">Editar Resultado</h3>
-                <p id="editMatchRound" style="text-align:center; font-size:0.78rem; color:#94a3b8; margin-top:0; margin-bottom:1rem;"></p>
-                <form id="editMatchForm">
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:0.75rem; margin-bottom:1rem;">
-                        <div style="flex:1; text-align:center;">
-                            <strong id="editHomeLabel" style="display:block; color:#f8fafc; font-size:0.9rem; margin-bottom:0.35rem;"></strong>
-                            <input type="number" id="editHomeScore" min="0" class="form-control" style="width:70px; text-align:center; margin:0 auto; font-size:1.2rem; font-weight:800;" />
-                        </div>
-                        <span style="font-size:1.25rem; color:#475569; font-weight:800;">–</span>
-                        <div style="flex:1; text-align:center;">
-                            <strong id="editAwayLabel" style="display:block; color:#f8fafc; font-size:0.9rem; margin-bottom:0.35rem;"></strong>
-                            <input type="number" id="editAwayScore" min="0" class="form-control" style="width:70px; text-align:center; margin:0 auto; font-size:1.2rem; font-weight:800;" />
-                        </div>
+            <div class="glass-panel" style="width:100%; max-width:580px; padding:1.75rem; border-radius:14px; background:rgba(30,41,59,0.97); box-shadow:0 16px 48px rgba(0,0,0,0.6); max-height:90vh; overflow-y:auto;">
+                <h3 id="editMatchTitle" style="margin-top:0; text-align:center; color:#f8fafc; font-size:1.2rem; font-weight:800;">Editar Resultado y Equipos</h3>
+                <p id="editMatchRound" style="text-align:center; font-size:0.8rem; color:#94a3b8; margin-top:0.2rem; margin-bottom:1rem;"></p>
+                
+                <!-- Equipos y Marcador -->
+                <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:0.75rem; align-items:center; margin-bottom:1.25rem; background:rgba(15,23,42,0.5); padding:1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                    <div style="text-align:center;">
+                        <label style="display:block; font-size:0.75rem; color:#94a3b8; margin-bottom:0.3rem;">Equipo Local</label>
+                        <select id="editHomeTeam" class="form-control" style="width:100%; font-size:0.85rem; margin-bottom:0.5rem;"></select>
+                        <input type="number" id="editHomeScore" min="0" class="form-control" style="width:75px; text-align:center; margin:0 auto; font-size:1.25rem; font-weight:800;" />
                     </div>
-                    <div style="margin-bottom:1.25rem;">
-                        <label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:0.2rem;">Estado del Partido</label>
-                        <select id="editMatchStatus" class="form-control" style="width:100%; box-sizing:border-box;">
-                            <option value="Programado">Programado</option>
-                            <option value="En Juego">En Juego</option>
-                            <option value="Finalizado">Finalizado</option>
-                        </select>
+                    
+                    <div style="font-size:1.1rem; font-weight:800; color:#60a5fa; text-align:center;">VS</div>
+                    
+                    <div style="text-align:center;">
+                        <label style="display:block; font-size:0.75rem; color:#94a3b8; margin-bottom:0.3rem;">Equipo Visitante</label>
+                        <select id="editAwayTeam" class="form-control" style="width:100%; font-size:0.85rem; margin-bottom:0.5rem;"></select>
+                        <input type="number" id="editAwayScore" min="0" class="form-control" style="width:75px; text-align:center; margin:0 auto; font-size:1.25rem; font-weight:800;" />
                     </div>
-                    <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
+                </div>
+
+                <!-- Estado del Partido -->
+                <div style="margin-bottom:1.25rem;">
+                    <label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:0.3rem;">Estado del Partido</label>
+                    <select id="editMatchStatus" class="form-control" style="width:100%;">
+                        <option value="Programado">Programado</option>
+                        <option value="En Juego">En Juego</option>
+                        <option value="Finalizado">Finalizado</option>
+                    </select>
+                </div>
+
+                <!-- Registro de Eventos (Goles / Infracciones) -->
+                <div class="glass-panel" style="padding:1rem; margin-bottom:1.25rem; background:rgba(15,23,42,0.4); border-radius:10px; border:1px solid rgba(96,165,250,0.2);">
+                    <h4 style="margin-top:0; margin-bottom:0.6rem; font-size:0.88rem; color:#60a5fa;">⚡ Registrar Anotación o Infracción</h4>
+                    <form id="quickEventForm" style="display:flex; flex-direction:column; gap:0.6rem;">
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+                            <div>
+                                <label style="font-size:0.75rem; color:#94a3b8;">Equipo</label>
+                                <select id="quickEventTeam" class="form-control" style="width:100%; font-size:0.8rem;"></select>
+                            </div>
+                            <div>
+                                <label style="font-size:0.75rem; color:#94a3b8;">Jugador</label>
+                                <select id="quickEventPlayer" class="form-control" style="width:100%; font-size:0.8rem;" required></select>
+                            </div>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+                            <div>
+                                <label style="font-size:0.75rem; color:#94a3b8;">Tipo de Evento</label>
+                                <select id="quickEventType" class="form-control" style="width:100%; font-size:0.8rem;"></select>
+                            </div>
+                            <div>
+                                <label style="font-size:0.75rem; color:#94a3b8;">Minuto</label>
+                                <input type="number" id="quickEventMinute" class="form-control" min="1" max="120" placeholder="Ej. 45" style="width:100%; font-size:0.8rem;" />
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-secondary btn-sm" style="margin-top:0.25rem; align-self:flex-start;">+ Registrar Evento</button>
+                    </form>
+                </div>
+
+                <!-- Historial de Eventos -->
+                <div id="quickEventsList" style="margin-bottom:1.25rem;"></div>
+
+                <!-- Botones de Acción -->
+                <div style="display:flex; gap:0.75rem; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.1); padding-top:1rem;">
+                    <div id="modalExtraActions"></div>
+                    <div style="display:flex; gap:0.5rem;">
                         <button type="button" id="btnCloseEditMatch" class="btn btn-secondary">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">💾 Guardar</button>
+                        <button type="button" id="btnSaveMatchChanges" class="btn btn-success" style="background:#10b981; border:none; color:white; font-weight:700;">Guardar Cambios</button>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
     `;
 
     const listContainer = container.querySelector('#matchesListContainer');
     let currentMatchId = null;
+    let currentMatchEvents = [];
 
     function renderList(matchesToShow) {
         if (matchesToShow.length === 0) {
@@ -210,7 +247,6 @@ function render(container, activeLeague, teams, matches) {
             return;
         }
 
-        // Re-group the filtered matches
         const fg = {};
         matchesToShow.forEach(m => {
             let key;
@@ -272,7 +308,6 @@ function render(container, activeLeague, teams, matches) {
             </div>
         `).join('');
 
-        // Click to edit
         listContainer.querySelectorAll('.match-row-card').forEach(card => {
             card.addEventListener('mouseenter', () => { card.style.borderColor = 'rgba(96,165,250,0.4)'; card.style.transform = 'translateY(-1px)'; });
             card.addEventListener('mouseleave', () => { card.style.borderColor = 'rgba(255,255,255,0.07)'; card.style.transform = ''; });
@@ -283,7 +318,6 @@ function render(container, activeLeague, teams, matches) {
         });
     }
 
-    // Filtering logic
     const statusFilter = container.querySelector('#filterStatus');
     const teamFilter = container.querySelector('#filterTeam');
 
@@ -307,19 +341,14 @@ function render(container, activeLeague, teams, matches) {
     });
     container.querySelector('#btnRefreshMatches').addEventListener('click', () => renderMatches(container));
 
-    // Initial render
     renderList(matches);
 
-    // Add Match Modal
+    // Modal para agregar partidos
     const addModal = container.querySelector('#addMatchModal');
     const addForm = container.querySelector('#addMatchForm');
     if (addModal && addForm) {
-        container.querySelector('#btnOpenAddMatch').addEventListener('click', () => {
-            addModal.style.display = 'flex';
-        });
-        container.querySelector('#btnCloseAddMatch').addEventListener('click', () => {
-            addModal.style.display = 'none';
-        });
+        container.querySelector('#btnOpenAddMatch').addEventListener('click', () => { addModal.style.display = 'flex'; });
+        container.querySelector('#btnCloseAddMatch').addEventListener('click', () => { addModal.style.display = 'none'; });
         addModal.addEventListener('click', (e) => { if (e.target === addModal) addModal.style.display = 'none'; });
 
         addForm.addEventListener('submit', async (e) => {
@@ -327,8 +356,8 @@ function render(container, activeLeague, teams, matches) {
             const fd = new FormData(addForm);
             const homeId = Number(fd.get('homeTeamId'));
             const awayId = Number(fd.get('awayTeamId'));
-            if (!homeId || !awayId) { alert('Selecciona ambos equipos.'); return; }
-            if (homeId === awayId) { alert('Un equipo no puede jugar contra sí mismo.'); return; }
+            if (!homeId || !awayId) { toast.warning('Selecciona ambos equipos.'); return; }
+            if (homeId === awayId) { toast.warning('Un equipo no puede jugar contra sí mismo.'); return; }
             try {
                 await createMatch({
                     leagueId: activeLeague.id,
@@ -340,46 +369,218 @@ function render(container, activeLeague, teams, matches) {
                     homeScore: 0,
                     awayScore: 0
                 });
+                toast.success('Partido programado con éxito');
                 addModal.style.display = 'none';
                 addForm.reset();
                 renderMatches(container);
-            } catch (err) { alert('Error al programar partido: ' + err.message); }
+            } catch (err) { toast.error('Error al programar partido: ' + err.message); }
         });
     }
 
-    // Edit Result Modal
+    // Modal Unificado de Gestión de Partido
     const editModal = container.querySelector('#editMatchModal');
-    const editForm = container.querySelector('#editMatchForm');
+    const quickForm = container.querySelector('#quickEventForm');
+    const teamSelect = container.querySelector('#quickEventTeam');
+    const playerSelect = container.querySelector('#quickEventPlayer');
+    const typeSelect = container.querySelector('#quickEventType');
 
-    function openEditModal(matchId) {
+    const homeSelect = container.querySelector('#editHomeTeam');
+    const awaySelect = container.querySelector('#editAwayTeam');
+
+    async function openEditModal(matchId) {
         const match = matches.find(m => m.id === matchId);
         if (!match) return;
         currentMatchId = matchId;
 
-        const home = teamMap.get(Number(match.homeTeamId));
-        const away = teamMap.get(Number(match.awayTeamId));
-        container.querySelector('#editHomeLabel').textContent = home ? home.name : 'Local';
-        container.querySelector('#editAwayLabel').textContent = away ? away.name : 'Visitante';
+        // Populate team selects
+        homeSelect.innerHTML = teams.map(t => `<option value="${t.id}" ${t.id === match.homeTeamId ? 'selected' : ''}>${t.name}</option>`).join('');
+        awaySelect.innerHTML = teams.map(t => `<option value="${t.id}" ${t.id === match.awayTeamId ? 'selected' : ''}>${t.name}</option>`).join('');
+
         container.querySelector('#editHomeScore').value = match.score?.home ?? match.homeScore ?? 0;
         container.querySelector('#editAwayScore').value = match.score?.away ?? match.awayScore ?? 0;
         container.querySelector('#editMatchStatus').value = match.status || 'Programado';
-        container.querySelector('#editMatchRound').textContent = match.round ? `Jornada ${match.round}` : (match.date ? new Date(match.date).toLocaleDateString('es-ES') : '');
+        container.querySelector('#editMatchRound').textContent = match.round ? `Ronda: ${match.round}` : (match.date ? new Date(match.date).toLocaleDateString('es-ES') : '');
+
+        // Populate event team selector dynamically
+        const updateQuickTeamSelect = () => {
+            const currentHomeId = Number(homeSelect.value);
+            const currentAwayId = Number(awaySelect.value);
+            const hTeam = teamMap.get(currentHomeId);
+            const aTeam = teamMap.get(currentAwayId);
+            teamSelect.innerHTML = `
+                <option value="${currentHomeId}">${hTeam ? hTeam.name : 'Local'}</option>
+                <option value="${currentAwayId}">${aTeam ? aTeam.name : 'Visitante'}</option>
+            `;
+        };
+        updateQuickTeamSelect();
+
+        homeSelect.onchange = updateQuickTeamSelect;
+        awaySelect.onchange = updateQuickTeamSelect;
+
+        typeSelect.innerHTML = `
+            <option value="${sportConfig.scoreEvent}">${sportConfig.icon || '⚽'} ${sportConfig.scoreEvent}</option>
+            ${(sportConfig.infractions || [
+                { type: 'Tarjeta Amarilla', label: '🟨 Tarjeta Amarilla' },
+                { type: 'Tarjeta Roja', label: '🟥 Tarjeta Roja' }
+            ]).map(inf => `<option value="${inf.type}">${inf.label}</option>`).join('')}
+        `;
+
+        const homePlayers = match.homeTeamId ? await getPlayersByTeam(match.homeTeamId) : [];
+        const awayPlayers = match.awayTeamId ? await getPlayersByTeam(match.awayTeamId) : [];
+        const playerMap = new Map([...homePlayers, ...awayPlayers].map(p => [p.id, p]));
+
+        const updatePlayerSelect = async (tId) => {
+            playerSelect.innerHTML = '';
+            const pList = await getPlayersByTeam(Number(tId));
+            if (pList.length === 0) {
+                playerSelect.innerHTML = `<option value="">Sin jugadores registrados</option>`;
+            } else {
+                pList.forEach(p => {
+                    playerSelect.innerHTML += `<option value="${p.id}">#${p.number} - ${p.name}</option>`;
+                });
+            }
+        };
+
+        await updatePlayerSelect(homeSelect.value);
+        teamSelect.onchange = () => updatePlayerSelect(teamSelect.value);
+
+        // Load Events
+        currentMatchEvents = await getEventsByMatch(matchId);
+        renderQuickEventsList(playerMap);
+
+        // Action Buttons (Finalize / Undo)
+        const extraActions = container.querySelector('#modalExtraActions');
+        const isFinished = match.status === 'Finalizado' || match.status === 'finished';
+
+        if (isFinished) {
+            extraActions.innerHTML = `<button type="button" id="btnModalUndo" class="btn btn-secondary btn-sm">Deshacer Partido</button>`;
+            extraActions.querySelector('#btnModalUndo').onclick = async () => {
+                const confirmed = await confirmAction('Deshacer Partido', '¿Estás seguro de deshacer este partido? Se revertirán las estadísticas.');
+                if (confirmed) {
+                    try {
+                        await undoMatch(matchId);
+                        toast.success('Partido revertido con éxito.');
+                        editModal.style.display = 'none';
+                        renderMatches(container);
+                    } catch (err) { toast.error('Error al deshacer: ' + err.message); }
+                }
+            };
+        } else {
+            extraActions.innerHTML = `<button type="button" id="btnModalFinalize" class="btn btn-success btn-sm">Finalizar Partido</button>`;
+            extraActions.querySelector('#btnModalFinalize').onclick = async () => {
+                const hId = Number(homeSelect.value);
+                const aId = Number(awaySelect.value);
+                const hTeam = teamMap.get(hId);
+                const aTeam = teamMap.get(aId);
+
+                const calcHomeScore = currentMatchEvents.filter(ev => ev.teamId === hId && !isInfraction(ev.type)).length;
+                const calcAwayScore = currentMatchEvents.filter(ev => ev.teamId === aId && !isInfraction(ev.type)).length;
+
+                let winnerId = null;
+                const isKnockout = activeLeague.mode === 'eliminacion' || activeLeague.mode === 'doble-eliminacion' || activeLeague.modality === 'knockout';
+
+                if (isKnockout && calcHomeScore === calcAwayScore && hTeam && aTeam) {
+                    const pickWinner = prompt(`El partido terminó en empate (${calcHomeScore}-${calcAwayScore}). Escriba el nombre del ganador (${hTeam.name} o ${aTeam.name}):`);
+                    if (pickWinner?.trim().toLowerCase() === hTeam.name.toLowerCase()) winnerId = hTeam.id;
+                    else if (pickWinner?.trim().toLowerCase() === aTeam.name.toLowerCase()) winnerId = aTeam.id;
+                    else { toast.error('Ganador no válido. Operación cancelada.'); return; }
+                }
+
+                try {
+                    await finalizeMatch(matchId, currentMatchEvents, winnerId);
+                    toast.success('¡Partido finalizado con éxito!');
+                    editModal.style.display = 'none';
+                    renderMatches(container);
+                } catch (err) { toast.error('Error al finalizar: ' + err.message); }
+            };
+        }
+
         editModal.style.display = 'flex';
     }
+
+    function renderQuickEventsList(playerMap) {
+        const listDiv = container.querySelector('#quickEventsList');
+        if (currentMatchEvents.length === 0) {
+            listDiv.innerHTML = `<p style="color:#94a3b8; margin:0; font-size:0.8rem; text-align:center;">No hay eventos registrados aún.</p>`;
+            return;
+        }
+
+        listDiv.innerHTML = `
+            <div style="font-weight:700; color:#cbd5e1; font-size:0.8rem; margin-bottom:0.35rem;">Historial de Eventos (${currentMatchEvents.length}):</div>
+            <div style="display:flex; flex-direction:column; gap:0.3rem; max-height:120px; overflow-y:auto;">
+                ${currentMatchEvents.map(ev => {
+                    const p = playerMap.get(Number(ev.playerId));
+                    const pName = p ? `#${p.number} ${p.name}` : `ID ${ev.playerId}`;
+                    const isInf = isInfraction(ev.type);
+                    const color = isInf ? (ev.type.toLowerCase().includes('roja') ? '#ef4444' : '#f59e0b') : '#10b981';
+                    return `
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.6); padding:0.35rem 0.6rem; border-radius:6px; font-size:0.78rem;">
+                            <span><strong>Min ${ev.minute || 'S/N'}</strong>: <strong style="color:${color};">${ev.type}</strong> - ${pName}</span>
+                            <button type="button" class="btn-del-event" data-ev-id="${ev.id}" style="background:none; border:none; color:#ef4444; cursor:pointer; font-weight:bold;">✖</button>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+
+        listDiv.querySelectorAll('.btn-del-event').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const evId = Number(btn.dataset.evId);
+                await deleteMatchEvent(evId);
+                toast.info('Evento eliminado');
+                openEditModal(currentMatchId);
+            });
+        });
+    }
+
+    quickForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!currentMatchId) return;
+        const teamId = Number(teamSelect.value);
+        const playerId = Number(playerSelect.value);
+        const type = typeSelect.value;
+        const minute = container.querySelector('#quickEventMinute').value ? Number(container.querySelector('#quickEventMinute').value) : null;
+
+        if (!playerId) { toast.warning('Selecciona un jugador.'); return; }
+
+        try {
+            await createMatchEvent({ matchId: currentMatchId, playerId, teamId, type, minute });
+            toast.success('Evento registrado');
+            
+            // Recalcular marcador en vivo automáticamente
+            const allEvents = await getEventsByMatch(currentMatchId);
+            const homeScore = allEvents.filter(ev => ev.teamId === Number(homeSelect.value) && !isInfraction(ev.type)).length;
+            const awayScore = allEvents.filter(ev => ev.teamId === Number(awaySelect.value) && !isInfraction(ev.type)).length;
+            container.querySelector('#editHomeScore').value = homeScore;
+            container.querySelector('#editAwayScore').value = awayScore;
+
+            container.querySelector('#quickEventMinute').value = '';
+            openEditModal(currentMatchId);
+        } catch (err) { toast.error('Error al agregar evento: ' + err.message); }
+    });
 
     container.querySelector('#btnCloseEditMatch').addEventListener('click', () => { editModal.style.display = 'none'; });
     editModal.addEventListener('click', (e) => { if (e.target === editModal) editModal.style.display = 'none'; });
 
-    editForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+    container.querySelector('#btnSaveMatchChanges').addEventListener('click', async () => {
         if (!currentMatchId) return;
+        const homeTeamId = Number(homeSelect.value);
+        const awayTeamId = Number(awaySelect.value);
         const homeScore = Number(container.querySelector('#editHomeScore').value);
         const awayScore = Number(container.querySelector('#editAwayScore').value);
         const status = container.querySelector('#editMatchStatus').value;
+
+        if (homeTeamId === awayTeamId) {
+            toast.warning('Un equipo no puede jugar contra sí mismo.');
+            return;
+        }
+
         try {
-            await updateMatch(currentMatchId, { homeScore, awayScore, status });
+            await updateMatch(currentMatchId, { homeTeamId, awayTeamId, homeScore, awayScore, status });
+            toast.success('Cambios guardados con éxito');
             editModal.style.display = 'none';
             renderMatches(container);
-        } catch (err) { alert('Error al guardar: ' + err.message); }
+        } catch (err) { toast.error('Error al guardar cambios: ' + err.message); }
     });
 }

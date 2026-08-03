@@ -4,6 +4,7 @@ import { getPlayersByTeam, createPlayer } from '../db/players.db.js';
 import { getAllMatches } from '../db/matches.db.js';
 import { getActiveLeague } from '../db/leagues.db.js';
 import { SPORTS } from '../sports-terms.js';
+import { toast } from '../components/toast.js';
 
 
 export async function renderTeamDetail(container, params) {
@@ -405,12 +406,11 @@ export async function renderTeamDetail(container, params) {
 
         try {
             await createPlayer(newPlayer);
+            toast.success('Jugador registrado con éxito');
             modal.classList.add('hidden');
-            
-            // Re-renderizamos la vista en lugar de reload completo para mayor rapidez
             renderTeamDetail(container, params);
         } catch (err) {
-            alert(err.message || 'Error al registrar jugador');
+            toast.error(err.message || 'Error al registrar jugador');
         }
     });
 }

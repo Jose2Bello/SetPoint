@@ -66,8 +66,16 @@ export function initDB() {
             
             dbInstance.onversionchange = () => {
                 dbInstance.close();
-                alert('La base de datos fue actualizada en otra pestaña. Por favor recarga la página.');
-                location.reload();
+                // Show an inline notification instead of blocking alert
+                const banner = document.createElement('div');
+                banner.style.cssText = 'position:fixed;top:0;left:0;right:0;padding:1rem 1.5rem;background:#ef4444;color:#fff;text-align:center;font-weight:600;z-index:9999;';
+                banner.textContent = '⚠️ La base de datos fue actualizada. Por favor recarga la página.';
+                const btn = document.createElement('button');
+                btn.textContent = 'Recargar';
+                btn.style.cssText = 'margin-left:1rem;padding:0.25rem 0.75rem;background:#fff;color:#ef4444;border:none;border-radius:4px;cursor:pointer;font-weight:700;';
+                btn.onclick = () => location.reload();
+                banner.appendChild(btn);
+                document.body.prepend(banner);
             };
             
             resolve(dbInstance);

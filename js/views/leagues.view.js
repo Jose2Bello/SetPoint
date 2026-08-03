@@ -1,13 +1,16 @@
 import { leaguesDb } from '../db/leagues.db.js';
 import { teamsDb, createTeam, updateTeam, getAllTeams } from '../db/teams.db.js';
-import { playersDb } from '../db/players.db.js';
+import { playersDb, getPlayersByTeam } from '../db/players.db.js';
 import { matchesDb } from '../db/matches.db.js';
-import { eventsDb } from '../db/events.db.js';
+import { eventsDb, getEventsByMatch } from '../db/events.db.js';
 import { transactions } from '../db/transactions.js';
 import { bracketService } from '../services/bracket.service.js';
 import { storage } from '../utils/storage.js';
 import { getSportConfig } from '../sports-terms.js';
 import { confirmAction } from '../components/confirm-dialog.js';
+import { toast } from '../components/toast.js';
+
+let activeResizeHandler = null;
 
 export async function renderLeagues(container) {
     const leagues = await leaguesDb.getAll();
@@ -40,7 +43,7 @@ function renderListView(container, leagues, activeLeagueId) {
             </div>
         ` : `
             <div class="leagues-grid">
-                ${leagues.map(league => renderLeagueCard(league, Number(activeLeagueId) === league.id)).join('')}
+                ${leagues.map(league => renderLeagueCard(league, Number(activeLeagueId) === Number(league.id))).join('')}
             </div>
         `}
     `;
@@ -49,7 +52,7 @@ function renderListView(container, leagues, activeLeagueId) {
 }
 
 function renderLeagueCard(league, isActive) {
-    const sport = getSportConfig(league.sport);
+    const sport = getSportConfig(league.sport) || { icon: '🏆', name: league.sport || 'Deporte' };
     const modeLabel = league.mode === 'eliminacion' 
         ? `Eliminación Directa (${league.bracketTeamsCount || 8} equipos)` 
         : league.mode === 'doble-eliminacion'
@@ -85,27 +88,32 @@ function setupListEventListeners(container) {
     container.querySelector('#btnNewLeagueEmpty')?.addEventListener('click', goForm);
 
     container.addEventListener('click', async (e) => {
-        const id = Number(e.target.dataset.id);
+        const targetBtn = e.target.closest('button');
+        if (!targetBtn || !targetBtn.dataset.id) return;
+
+        const id = Number(targetBtn.dataset.id);
         if (!id) return;
 
-        if (e.target.classList.contains('btn-manage')) {
+        if (targetBtn.classList.contains('btn-manage')) {
             renderLeagueDetailView(container, id);
-        } else if (e.target.classList.contains('btn-activate')) {
+        } else if (targetBtn.classList.contains('btn-activate')) {
             await transactions.activateLeague(id);
             storage.setActiveLeagueId(id);
             renderLeagues(container);
-        } else if (e.target.classList.contains('btn-edit')) {
+        } else if (targetBtn.classList.contains('btn-edit')) {
             const league = await leaguesDb.getById(id);
             if (league) renderFormView(container, league);
-        } else if (e.target.classList.contains('btn-delete')) {
-            if (confirm('¿Estás seguro de eliminar esta liga? Se borrarán todos sus equipos, jugadores y partidos asociados.')) {
+        } else if (targetBtn.classList.contains('btn-delete')) {
+            const confirmed = await confirmAction('Eliminar Liga', '¿Estás seguro de eliminar esta liga? Se borrarán todos sus equipos, jugadores y partidos asociados.');
+            if (confirmed) {
                 await transactions.deleteLeagueCascade(id);
                 if (Number(storage.getActiveLeagueId()) === id) {
                     storage.setActiveLeagueId(null);
                 }
+                toast.success('Liga eliminada');
                 renderLeagues(container);
             }
-        } else if (e.target.classList.contains('btn-export')) {
+        } else if (targetBtn.classList.contains('btn-export')) {
             await exportLeagueJson(id);
         }
     });
@@ -122,16 +130,18 @@ function setupListEventListeners(container) {
                 throw new Error('El archivo JSON no tiene la estructura de una liga válida.');
             }
             await transactions.importLeagueData(data);
-        toast.success('¡Liga importada con éxito!');
+            toast.success('¡Liga importada con éxito!');
             renderLeagues(container);
         } catch (err) {
-          toast.error('No se puede eliminar este equipo porque ya tiene partidos registrados.');
+            toast.error('Error al importar la liga: ' + (err.message || 'Archivo JSON no válido'));
+        } finally {
+            e.target.value = '';
         }
     });
 }
 
 /**
- * Vista de Administración y Detalle de Liga (Inscripciones + Bracket)
+ * Vista de Administración y Detalle de Liga (Inscripciones + Bracket / Partidos)
  */
 async function renderLeagueDetailView(container, leagueId, activeTab = 'bracket') {
     const league = await leaguesDb.getById(leagueId);
@@ -140,7 +150,7 @@ async function renderLeagueDetailView(container, leagueId, activeTab = 'bracket'
         return;
     }
 
-    const sport = getSportConfig(league.sport);
+    const sport = getSportConfig(league.sport) || { icon: '🏆', name: league.sport || 'Deporte' };
     const teams = await teamsDb.getByLeague(leagueId);
     const matches = await matchesDb.getByLeague(leagueId);
 
@@ -172,7 +182,13 @@ async function renderLeagueDetailView(container, leagueId, activeTab = 'bracket'
         <div id="leagueTabContent"></div>
     `;
 
-    container.querySelector('#btnBackToLeagues').addEventListener('click', () => renderLeagues(container));
+    container.querySelector('#btnBackToLeagues').addEventListener('click', () => {
+        if (activeResizeHandler) {
+            window.removeEventListener('resize', activeResizeHandler);
+            activeResizeHandler = null;
+        }
+        renderLeagues(container);
+    });
 
     const tabContent = container.querySelector('#leagueTabContent');
     const tabBracketBtn = container.querySelector('#tabBracketBtn');
@@ -207,11 +223,9 @@ async function renderLeagueDetailView(container, leagueId, activeTab = 'bracket'
 }
 
 /**
- * Renderiza la pestaña de Inscripciones (Gestión de equipos que ingresan a la liga tras su creación)
+ * Pestaña de Inscripciones
  */
 async function renderEntriesTab(container, league, enrolledTeams, refreshTab) {
-    const allTeams = await teamsDb.getByLeague(league.id);
-
     container.innerHTML = `
         <div class="entries-table-card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
@@ -241,9 +255,7 @@ async function renderEntriesTab(container, league, enrolledTeams, refreshTab) {
                         ${enrolledTeams.map((t, idx) => `
                             <tr>
                                 <td><strong>${idx + 1}</strong></td>
-                                <td>
-                                    <strong style="color: #f8fafc;">${t.name}</strong>
-                                </td>
+                                <td><strong style="color: #f8fafc;">${t.name}</strong></td>
                                 <td>${t.city || 'Sin ciudad'}</td>
                                 <td style="font-size: 0.8rem; color: #94a3b8;">${t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'N/A'}</td>
                                 <td>
@@ -264,13 +276,12 @@ async function renderEntriesTab(container, league, enrolledTeams, refreshTab) {
 }
 
 /**
- * Renderiza la pestaña de Partidos para ligas de formato Liga Regular
+ * Pestaña de Partidos (Liga Regular)
  */
 function renderLeagueMatchesTab(container, league, teams, matches, refreshTab) {
     const teamMap = new Map(teams.map(t => [Number(t.id), t.name]));
     const statusColor = { 'Finalizado': '#10b981', 'En Juego': '#f59e0b', 'Programado': '#3b82f6' };
 
-    // Group by round if available, otherwise flat list
     const grouped = {};
     matches.forEach(m => {
         const key = m.round ? `Jornada ${m.round}` : 'Partidos';
@@ -322,7 +333,7 @@ function renderLeagueMatchesTab(container, league, teams, matches, refreshTab) {
         row.addEventListener('mouseleave', () => { row.style.borderColor = 'rgba(255,255,255,0.07)'; row.style.transform = ''; });
         row.addEventListener('click', () => {
             const matchId = Number(row.dataset.matchId);
-            const match = matches.find(m => m.id === matchId);
+            const match = matches.find(m => Number(m.id) === matchId);
             if (match) showAdminMatchEditModal(match, teamMap, teams, refreshTab);
         });
     });
@@ -333,7 +344,7 @@ function renderLeagueMatchesTab(container, league, teams, matches, refreshTab) {
 }
 
 /**
- * Modal para programar un nuevo partido en Liga Regular
+ * Modal para programar partido
  */
 function showAddMatchModal(leagueId, teams, onSuccess) {
     let overlay = document.getElementById('add-match-modal');
@@ -380,7 +391,7 @@ function showAddMatchModal(leagueId, teams, onSuccess) {
         </div>
     `;
 
-    const closeModal = () => { overlay.style.display = 'none'; };
+    const closeModal = () => { overlay.remove(); };
     overlay.querySelector('#btnCancelAddMatch').addEventListener('click', closeModal);
     overlay.querySelector('#formAddMatch').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -399,7 +410,7 @@ function showAddMatchModal(leagueId, teams, onSuccess) {
 }
 
 /**
- * Modal para inscribir equipo — muestra equipos existentes del mismo deporte y permite crear nuevos
+ * Modal para inscribir equipos
  */
 async function showEnrollTeamModal(leagueId, leagueSport, enrolledIds, onSuccess) {
     let overlay = document.getElementById('enroll-team-modal');
@@ -410,12 +421,8 @@ async function showEnrollTeamModal(leagueId, leagueSport, enrolledIds, onSuccess
         document.body.appendChild(overlay);
     }
 
-    // Cargar todos los equipos de la misma liga de deporte (sin duplicar los ya inscritos)
     const allTeams = await getAllTeams();
-
-    // Teams of same sport not already enrolled in THIS league
     const availableTeams = allTeams.filter(t => !enrolledIds.has(Number(t.id)));
-
     const availableOptions = availableTeams.length > 0
         ? availableTeams.map(t => `<option value="existing:${t.id}">${t.name}${t.city ? ' — ' + t.city : ''}</option>`).join('')
         : '';
@@ -467,7 +474,7 @@ async function showEnrollTeamModal(leagueId, leagueSport, enrolledIds, onSuccess
         </div>
     `;
 
-    const closeModal = () => { overlay.style.display = 'none'; };
+    const closeModal = () => { overlay.remove(); };
     const panelPick = overlay.querySelector('#panelPickTeam');
     const panelNew = overlay.querySelector('#panelNewTeam');
     const tabPick = overlay.querySelector('#tabPickTeam');
@@ -479,37 +486,38 @@ async function showEnrollTeamModal(leagueId, leagueSport, enrolledIds, onSuccess
     overlay.querySelector('#btnCancelEnroll')?.addEventListener('click', closeModal);
     overlay.querySelector('#btnCancelNewTeam')?.addEventListener('click', closeModal);
 
-    // Enroll existing team → just update its leagueId
     overlay.querySelector('#btnEnrollExisting')?.addEventListener('click', async () => {
         const select = overlay.querySelector('#selectExistingTeam');
         const val = select?.value;
-        if (!val) { alert('Selecciona un equipo.'); return; }
+        if (!val) { toast.warning('Selecciona un equipo.'); return; }
         const teamId = Number(val.replace('existing:', ''));
         try {
             const team = await teamsDb.getById(teamId);
             if (team) {
-                await teamsDb.update(teamId, { ...team, leagueId: Number(leagueId) });
+                const updateFn = updateTeam || teamsDb.update;
+                await updateFn(teamId, { ...team, leagueId: Number(leagueId) });
             }
+            toast.success('Equipo inscrito con éxito');
             closeModal();
             if (typeof onSuccess === 'function') onSuccess();
-        } catch (err) { alert('Error al inscribir equipo: ' + err.message); }
+        } catch (err) { toast.error('Error al inscribir equipo: ' + err.message); }
     });
 
-    // Create new team
     overlay.querySelector('#formEnrollTeam')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const name = overlay.querySelector('#enrollTeamName').value.trim();
         const city = overlay.querySelector('#enrollTeamCity').value.trim();
         try {
             await createTeam({ leagueId: Number(leagueId), name, city });
+            toast.success('Equipo creado con éxito');
             closeModal();
             if (typeof onSuccess === 'function') onSuccess();
-        } catch (err) { alert(`Error al crear equipo: ${err.message}`); }
+        } catch (err) { toast.error(`Error al crear equipo: ${err.message}`); }
     });
 }
 
 /**
- * Renderiza el Cuadro de Eliminación (Bracket Visualizer)
+ * Pestaña del Bracket de Eliminación
  */
 function renderBracketTab(container, league, teams, matches, refreshTab) {
     const teamMap = new Map(teams.map(t => [Number(t.id), t.name]));
@@ -539,31 +547,20 @@ function renderBracketTab(container, league, teams, matches, refreshTab) {
                     await bracketService.generateBracket(league.id, teamIds);
                     refreshTab();
                 } catch (err) {
-                    alert(`Error al generar cuadro: ${err.message}`);
+                    toast.error(`Error al generar cuadro: ${err.message}`);
                 }
             });
         }
         return;
     }
 
-    // Agrupamos los partidos por Ronda y ordenamos del primer al último (Octavos -> Final / Doble Eliminación)
     const ROUND_ORDER = [
-        'Octavos Ganadores',
-        'Cuartos Ganadores',
-        'Semifinal Ganadores',
-        'Ronda 1 Perdedores',
-        'Ronda 2 Perdedores',
-        'Ronda 3 Perdedores',
-        'Ronda 4 Perdedores',
-        'Ronda 5 Perdedores',
-        'Final Ganadores',
-        'Final Perdedores',
-        'Gran Final',
-        'Octavos de Final',
-        'Cuartos de Final',
-        'Semifinal',
-        'Final'
+        'Octavos Ganadores', 'Cuartos Ganadores', 'Semifinal Ganadores',
+        'Ronda 1 Perdedores', 'Ronda 2 Perdedores', 'Ronda 3 Perdedores', 'Ronda 4 Perdedores', 'Ronda 5 Perdedores',
+        'Final Ganadores', 'Final Perdedores', 'Gran Final',
+        'Octavos de Final', 'Cuartos de Final', 'Semifinal', 'Final'
     ];
+    
     const roundMap = new Map();
     matches.forEach(m => {
         const rName = m.round || 'Cuadro';
@@ -598,29 +595,22 @@ function renderBracketTab(container, league, teams, matches, refreshTab) {
         </div>
     `;
 
-    // Wait for DOM to adjust heights, then draw lines
+    // Limpieza y dibujo de conectores de las llaves
+    if (activeResizeHandler) {
+        window.removeEventListener('resize', activeResizeHandler);
+    }
+
     setTimeout(() => {
         drawBracketLines(container, matches);
     }, 100);
 
-    // Resize listener
-    const resizeHandler = () => drawBracketLines(container, matches);
-    window.addEventListener('resize', resizeHandler);
+    activeResizeHandler = () => drawBracketLines(container, matches);
+    window.addEventListener('resize', activeResizeHandler);
 
-    // Clean up event listener when element is removed
-    const observer = new MutationObserver(() => {
-        if (!document.body.contains(container)) {
-            window.removeEventListener('resize', resizeHandler);
-            observer.disconnect();
-        }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    // Click listener para editar resultados del partido (Admin)
     container.querySelectorAll('.bracket-match-card').forEach(card => {
         card.addEventListener('click', () => {
             const matchId = Number(card.dataset.matchId);
-            const match = matches.find(m => m.id === matchId);
+            const match = matches.find(m => Number(m.id) === matchId);
             if (match) showAdminMatchEditModal(match, teamMap, teams, refreshTab);
         });
     });
@@ -630,7 +620,6 @@ function drawBracketLines(container, matches) {
     const wrapper = container.querySelector('.bracket-wrapper');
     if (!wrapper) return;
 
-    // SVG Canvas
     let svg = wrapper.querySelector('.bracket-svg');
     if (!svg) {
         svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -654,7 +643,7 @@ function drawBracketLines(container, matches) {
 
     cards.forEach(card => {
         const matchId = Number(card.dataset.matchId);
-        const match = matches.find(m => m.id === matchId);
+        const match = matches.find(m => Number(m.id) === matchId);
         if (!match || !match.nextMatchId) return;
 
         const nextCard = cardMap.get(Number(match.nextMatchId));
@@ -698,14 +687,14 @@ function renderBracketMatchCard(match, teamMap, matches) {
     if (match.homeTeamId) {
         homeName = teamMap.get(Number(match.homeTeamId)) || 'Equipo';
     } else {
-        const sourceMatch = matches.find(m => m.nextMatchId === match.id && m.nextMatchHomeSlot === true);
+        const sourceMatch = matches.find(m => Number(m.nextMatchId) === Number(match.id) && m.nextMatchHomeSlot === true);
         if (sourceMatch) homeName = `Ganador P.${sourceMatch.id}`;
     }
 
     if (match.awayTeamId) {
         awayName = teamMap.get(Number(match.awayTeamId)) || 'Equipo';
     } else {
-        const sourceMatch = matches.find(m => m.nextMatchId === match.id && m.nextMatchHomeSlot === false);
+        const sourceMatch = matches.find(m => Number(m.nextMatchId) === Number(match.id) && m.nextMatchHomeSlot === false);
         if (sourceMatch) awayName = `Ganador P.${sourceMatch.id}`;
     }
 
@@ -723,7 +712,7 @@ function renderBracketMatchCard(match, teamMap, matches) {
         <div class="bracket-match-card" data-match-id="${match.id}">
             <div class="bracket-card-header">
                 <span>Partido #${match.id}</span>
-                <span class="status-badge status-${match.status.toLowerCase().replace(' ', '-')}">${match.status || 'Programado'}</span>
+                <span class="status-badge status-${(match.status || 'Programado').toLowerCase().replace(/\s+/g, '-')}">${match.status || 'Programado'}</span>
             </div>
 
             <div class="bracket-team-row ${homeWinner ? 'winner' : ''} ${!match.homeTeamId ? 'placeholder-team' : ''}">
@@ -746,7 +735,7 @@ function renderBracketMatchCard(match, teamMap, matches) {
 }
 
 /**
- * Modal Admin para actualizar marcador, equipos y resultado del partido en el Bracket
+ * Modal Admin para actualizar resultados y equipos
  */
 function showAdminMatchEditModal(match, teamMap, teams, onSuccess) {
     let overlay = document.getElementById('admin-match-modal');
@@ -802,15 +791,19 @@ function showAdminMatchEditModal(match, teamMap, teams, onSuccess) {
                     </select>
                 </div>
 
-                <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
-                    <button type="button" id="btnCancelMatchEdit" class="btn btn-secondary">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                <div style="display: flex; gap: 0.75rem; justify-content: space-between; align-items: center;">
+                    <a href="#match-detail/${match.id}" class="btn btn-secondary text-sm btn-close-modal-link">🔍 Ficha Completa</a>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button type="button" id="btnCancelMatchEdit" class="btn btn-secondary">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                    </div>
                 </div>
             </form>
         </div>
     `;
 
-    const closeModal = () => { overlay.style.display = 'none'; };
+    const closeModal = () => { overlay.remove(); };
+    overlay.querySelector('.btn-close-modal-link')?.addEventListener('click', closeModal);
     overlay.querySelector('#btnCancelMatchEdit').addEventListener('click', closeModal);
 
     overlay.querySelector('#formAdminMatch').addEventListener('submit', async (e) => {
@@ -837,7 +830,7 @@ function showAdminMatchEditModal(match, teamMap, teams, onSuccess) {
             closeModal();
             if (typeof onSuccess === 'function') onSuccess();
         } catch (err) {
-            alert(`Error al guardar resultado: ${err.message}`);
+            toast.error(`Error al guardar resultado: ${err.message}`);
         }
     });
 }
@@ -939,6 +932,9 @@ function renderFormView(container, leagueToEdit = null) {
         const formData = new FormData(e.target);
         const data = Object.fromEntries(formData.entries());
 
+        if (data.rounds) data.rounds = Number(data.rounds);
+        if (data.bracketTeamsCount) data.bracketTeamsCount = Number(data.bracketTeamsCount);
+
         if (isEdit) {
             await leaguesDb.update(leagueToEdit.id, data);
         } else {
@@ -963,14 +959,14 @@ async function exportLeagueJson(leagueId) {
 
     let players = [];
     for (const team of teams) {
-        const teamPlayers = await playersDb.getByTeam(team.id);
-        players = players.concat(teamPlayers);
+        const teamPlayers = playersDb.getByTeam ? await playersDb.getByTeam(team.id) : await getPlayersByTeam(team.id);
+        players = players.concat(teamPlayers || []);
     }
 
     let events = [];
     for (const match of matches) {
-        const matchEvents = await eventsDb.getByMatch(match.id);
-        events = events.concat(matchEvents);
+        const matchEvents = eventsDb.getByMatch ? await eventsDb.getByMatch(match.id) : await getEventsByMatch(match.id);
+        events = events.concat(matchEvents || []);
     }
 
     const dump = {

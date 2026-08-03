@@ -11,7 +11,11 @@ export const SPORTS = {
         rankingTitle: 'Goleadores',
         themeClass: 'sport-futbol',
         icon: '⚽',
-        defaultPositions: ['Portero', 'Defensa', 'Centrocampista', 'Delantero']
+        defaultPositions: ['Portero', 'Defensa', 'Centrocampista', 'Delantero'],
+        infractions: [
+            { type: 'Tarjeta Amarilla', key: 'yellowCards', label: '🟨 Tarjeta Amarilla', short: '🟨 Amarilla' },
+            { type: 'Tarjeta Roja', key: 'redCards', label: '🟥 Tarjeta Roja', short: '🟥 Roja' }
+        ]
     },
     basquet: {
         id: 'basquet',
@@ -23,7 +27,11 @@ export const SPORTS = {
         rankingTitle: 'Encestadores',
         themeClass: 'sport-basquet',
         icon: '🏀',
-        defaultPositions: ['Base', 'Escolta', 'Alero', 'Ala-Pívot', 'Pívot']
+        defaultPositions: ['Base', 'Escolta', 'Alero', 'Ala-Pívot', 'Pívot'],
+        infractions: [
+            { type: 'Falta Personal', key: 'yellowCards', label: '🟨 Falta Personal', short: '🟨 Falta' },
+            { type: 'Falta Técnica / Expulsión', key: 'redCards', label: '🟥 Falta Técnica', short: '🟥 Técnica' }
+        ]
     },
     voleibol: {
         id: 'voleibol',
@@ -35,7 +43,11 @@ export const SPORTS = {
         rankingTitle: 'Anotadores',
         themeClass: 'sport-voleibol',
         icon: '🏐',
-        defaultPositions: ['Colocador', 'Rematador', 'Central', 'Líbero', 'Opuesto']
+        defaultPositions: ['Colocador', 'Rematador', 'Central', 'Líbero', 'Opuesto'],
+        infractions: [
+            { type: 'Tarjeta Amarilla', key: 'yellowCards', label: '🟨 Tarjeta Amarilla', short: '🟨 Amarilla' },
+            { type: 'Tarjeta Roja', key: 'redCards', label: '🟥 Tarjeta Roja', short: '🟥 Roja' }
+        ]
     }
 };
 
@@ -45,5 +57,13 @@ export const SPORTS = {
  * @returns {object} Terminology configurations
  */
 export function getSportConfig(sportId) {
-    return SPORTS[sportId] || SPORTS.futbol;
+    const config = SPORTS[sportId] || SPORTS.futbol;
+    return {
+        ...config,
+        infractions: config.infractions || [
+            { type: 'Tarjeta Amarilla', key: 'yellowCards', label: '🟨 Tarjeta Amarilla', short: '🟨 Amarilla' },
+            { type: 'Tarjeta Roja', key: 'redCards', label: '🟥 Tarjeta Roja', short: '🟥 Roja' }
+        ]
+    };
 }
+

@@ -150,11 +150,19 @@ export function finalizeMatch(matchId, eventsList, manualWinnerId = null) {
             let homeScore = 0;
             let awayScore = 0;
             
+            const isInfraction = (type) => {
+                if (!type) return false;
+                const lower = String(type).toLowerCase();
+                return lower.includes('tarjeta') || lower.includes('falta') || lower.includes('amarilla') || lower.includes('roja') || lower.includes('técnica') || lower.includes('expulsi');
+            };
+
             eventsList.forEach(ev => {
-                if (Number(ev.teamId) === match.homeTeamId) {
-                    homeScore++;
-                } else if (Number(ev.teamId) === match.awayTeamId) {
-                    awayScore++;
+                if (!isInfraction(ev.type)) {
+                    if (Number(ev.teamId) === match.homeTeamId) {
+                        homeScore++;
+                    } else if (Number(ev.teamId) === match.awayTeamId) {
+                        awayScore++;
+                    }
                 }
             });
             
@@ -236,19 +244,33 @@ export function finalizeMatch(matchId, eventsList, manualWinnerId = null) {
                 };
             }
             
-            const playerScores = {};
+            const playerStatsMap = {};
             eventsList.forEach(ev => {
                 const pid = Number(ev.playerId);
-                playerScores[pid] = (playerScores[pid] || 0) + 1;
+                if (!pid) return;
+                if (!playerStatsMap[pid]) {
+                    playerStatsMap[pid] = { goals: 0, yellowCards: 0, redCards: 0 };
+                }
+                const typeStr = String(ev.type || '').toLowerCase();
+                if (typeStr.includes('amarilla') || typeStr === 'falta personal') {
+                    playerStatsMap[pid].yellowCards += 1;
+                } else if (typeStr.includes('roja') || typeStr.includes('técnica') || typeStr.includes('expulsi')) {
+                    playerStatsMap[pid].redCards += 1;
+                } else if (!isInfraction(ev.type)) {
+                    playerStatsMap[pid].goals += 1;
+                }
             });
             
-            for (const [pidStr, goalsScored] of Object.entries(playerScores)) {
+            for (const [pidStr, statDiff] of Object.entries(playerStatsMap)) {
                 const pid = Number(pidStr);
                 playersStore.get(pid).onsuccess = (e) => {
                     const player = e.target.result;
                     if (player) {
-                        player.stats.played += 1;
-                        player.stats.goals += goalsScored;
+                        if (!player.stats) player.stats = { played: 0, goals: 0, yellowCards: 0, redCards: 0 };
+                        player.stats.played = (player.stats.played || 0) + 1;
+                        player.stats.goals = (player.stats.goals || 0) + statDiff.goals;
+                        player.stats.yellowCards = (player.stats.yellowCards || 0) + statDiff.yellowCards;
+                        player.stats.redCards = (player.stats.redCards || 0) + statDiff.redCards;
                         playersStore.put(player);
                     }
                 };
@@ -459,19 +481,39 @@ export function undoMatch(matchId) {
                 };
             }
             
-            const playerScores = {};
+            const isInfraction = (type) => {
+                if (!type) return false;
+                const lower = String(type).toLowerCase();
+                return lower.includes('tarjeta') || lower.includes('falta') || lower.includes('amarilla') || lower.includes('roja') || lower.includes('técnica') || lower.includes('expulsi');
+            };
+
+            const playerStatsMap = {};
             eventsList.forEach(ev => {
                 const pid = Number(ev.playerId);
-                playerScores[pid] = (playerScores[pid] || 0) + 1;
+                if (!pid) return;
+                if (!playerStatsMap[pid]) {
+                    playerStatsMap[pid] = { goals: 0, yellowCards: 0, redCards: 0 };
+                }
+                const typeStr = String(ev.type || '').toLowerCase();
+                if (typeStr.includes('amarilla') || typeStr === 'falta personal') {
+                    playerStatsMap[pid].yellowCards += 1;
+                } else if (typeStr.includes('roja') || typeStr.includes('técnica') || typeStr.includes('expulsi')) {
+                    playerStatsMap[pid].redCards += 1;
+                } else if (!isInfraction(ev.type)) {
+                    playerStatsMap[pid].goals += 1;
+                }
             });
             
-            for (const [pidStr, goalsScored] of Object.entries(playerScores)) {
+            for (const [pidStr, statDiff] of Object.entries(playerStatsMap)) {
                 const pid = Number(pidStr);
                 playersStore.get(pid).onsuccess = (e) => {
                     const player = e.target.result;
                     if (player) {
-                        player.stats.played -= 1;
-                        player.stats.goals -= goalsScored;
+                        if (!player.stats) player.stats = { played: 0, goals: 0, yellowCards: 0, redCards: 0 };
+                        player.stats.played = Math.max(0, (player.stats.played || 0) - 1);
+                        player.stats.goals = Math.max(0, (player.stats.goals || 0) - statDiff.goals);
+                        player.stats.yellowCards = Math.max(0, (player.stats.yellowCards || 0) - statDiff.yellowCards);
+                        player.stats.redCards = Math.max(0, (player.stats.redCards || 0) - statDiff.redCards);
                         playersStore.put(player);
                     }
                 };

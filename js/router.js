@@ -14,7 +14,8 @@ const routes = {
     'teams': renderTeams, 
     'team': renderTeamDetail,
     'matches': renderMatches,
-    'match': renderMatchDetail,      
+    'match': renderMatchDetail,
+    'match-detail': renderMatchDetail,   // alias for bracket "Ficha Completa" links
     'players': renderPlayersView, 
     'player': renderPlayerDetail,   
     'stats': renderStats
