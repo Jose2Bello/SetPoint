@@ -285,13 +285,21 @@ export async function renderMatchDetail(container, params) {
             const isKnockout = activeLeague.mode === 'eliminacion' || activeLeague.mode === 'doble-eliminacion' || activeLeague.modality === 'knockout';
 
             if (isKnockout && calcHomeScore === calcAwayScore) {
-                const pickWinner = prompt(`El partido terminó en empate (${calcHomeScore}-${calcAwayScore}). Al ser eliminación directa, declare el ganador escribiendo el nombre del equipo clasificado (${homeTeam.name} o ${awayTeam.name}):`);
-                if (pickWinner?.trim().toLowerCase() === homeTeam.name.toLowerCase()) {
-                    winnerId = homeTeam.id;
-                } else if (pickWinner?.trim().toLowerCase() === awayTeam.name.toLowerCase()) {
-                    winnerId = awayTeam.id;
+                const pick = await confirmAction(
+                    'Declarar Ganador',
+                    `El partido terminó en empate (${calcHomeScore}-${calcAwayScore}). Al ser eliminación directa, debes declarar al equipo clasificado.`,
+                    {
+                        confirmText: 'Declarar Ganador',
+                        choices: [
+                            { value: homeTeam.id, label: homeTeam.name },
+                            { value: awayTeam.id, label: awayTeam.name }
+                        ]
+                    }
+                );
+                if (pick && pick.confirmed) {
+                    winnerId = Number(pick.value);
                 } else {
-                    toast.error('Ganador no válido o cancelado. Operación abortada.');
+                    toast.error('Ganador no declarado. Operación cancelada.');
                     return;
                 }
             }

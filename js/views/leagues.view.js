@@ -104,14 +104,18 @@ function setupListEventListeners(container) {
             const league = await leaguesDb.getById(id);
             if (league) renderFormView(container, league);
         } else if (targetBtn.classList.contains('btn-delete')) {
-            const confirmed = await confirmAction('Eliminar Liga', '¿Estás seguro de eliminar esta liga? Se borrarán todos sus equipos, jugadores y partidos asociados.');
+            const confirmed = await confirmAction('Eliminar Liga', '¿Estás seguro de eliminar esta liga? Se borrarán todos sus equipos, jugadores y partidos asociados.', { confirmText: 'Sí, eliminar' });
             if (confirmed) {
-                await transactions.deleteLeagueCascade(id);
-                if (Number(storage.getActiveLeagueId()) === id) {
-                    storage.setActiveLeagueId(null);
+                try {
+                    await transactions.deleteLeagueCascade(id);
+                    if (Number(storage.getActiveLeagueId()) === id) {
+                        storage.setActiveLeagueId(null);
+                    }
+                    toast.success('Liga eliminada');
+                    renderLeagues(container);
+                } catch (err) {
+                    toast.error('Error al eliminar la liga: ' + (err.message || err));
                 }
-                toast.success('Liga eliminada');
-                renderLeagues(container);
             }
         } else if (targetBtn.classList.contains('btn-export')) {
             await exportLeagueJson(id);

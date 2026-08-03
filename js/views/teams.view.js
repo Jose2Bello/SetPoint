@@ -184,15 +184,19 @@ function setupListEventListeners(container, activeLeagueId, currentSportFilter, 
                 return;
             }
 
-            const confirmed = await confirmAction('Eliminar Equipo', '¿Estás seguro de eliminar este equipo? Se eliminarán también sus jugadores asociados.');
+            const confirmed = await confirmAction('Eliminar Equipo', '¿Estás seguro de eliminar este equipo? Se eliminarán también sus jugadores asociados.', { confirmText: 'Sí, eliminar' });
             if (confirmed) {
-                const players = await playersDb.getByTeam(id);
-                for (const player of players) {
-                    await playersDb.delete(player.id);
+                try {
+                    const players = await playersDb.getByTeam(id);
+                    for (const player of players) {
+                        await playersDb.delete(player.id);
+                    }
+                    await teamsDb.delete(id);
+                    toast.success('Equipo eliminado con éxito');
+                    renderTeams(container);
+                } catch (err) {
+                    toast.error('Error al eliminar el equipo: ' + (err.message || err));
                 }
-                await teamsDb.delete(id);
-                toast.success('Equipo eliminado con éxito');
-                renderTeams(container);
             }
         }
     });
