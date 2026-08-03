@@ -2,6 +2,7 @@ import { storage } from '../utils/storage.js';
 import { leaguesDb } from '../db/leagues.db.js';
 import { matchesDb } from '../db/matches.db.js';
 import { teamsDb } from '../db/teams.db.js';
+import { getAllPlayers } from '../db/players.db.js';
 import { standingsService } from '../services/standings.service.js';
 import { getSportConfig } from '../sports-terms.js';
 
@@ -23,9 +24,22 @@ export async function renderDashboard(container) {
     const sportTerm = getSportConfig(league.sport);
     const matches = await matchesDb.getByLeague(league.id);
     const teams = await teamsDb.getByLeague(league.id);
+    const players = await getAllPlayers(league.id);
 
-    // Obtener tabla calculada con tu servicio
+    const isBracketMode = league.mode === 'eliminacion' || league.mode === 'doble-eliminacion';
+    const modeLabel = league.mode === 'eliminacion' ? 'Eliminación Directa' : (league.mode === 'doble-eliminacion' ? 'Doble Eliminación' : 'Liga Regular');
+
+    // Obtener tabla calculada con tu servicio (solo puntos en modo liga)
     const standings = standingsService.getStandings(teams);
+
+    // En modo bracket se calculan posiciones según la eliminación en el torneo
+    const bracketStandings = isBracketMode ? computeBracketStandings(teams, matches) : [];
+
+    // Top anotadores según el deporte (se actualizan en todos los modos)
+    const topScorers = [...players]
+        .map(p => ({ ...p, goals: p.stats?.goals || 0 }))
+        .filter(p => p.goals > 0)
+        .sort((a, b) => b.goals - a.goals);
     
     // Próximo y último partido según 'status' ('Programado' / 'Finalizado')
     const nextMatch = matches.find(m => m.status === 'Programado');
@@ -97,18 +111,21 @@ export async function renderDashboard(container) {
                 <!-- Mini Tabla / Resumen Torneo -->
                 <div class="dashboard-card col-span-12">
                     <div class="dashboard-card-title">
-                        <span>📊 Resumen del Torneo (${league.mode === 'eliminacion' ? 'Eliminación Directa' : (league.mode === 'doble-eliminacion' ? 'Doble Eliminación' : 'Liga Regular')})</span>
-                        <a href="#stats" class="text-sm text-primary">Tabla Completa &rarr;</a>
+                        <span>📊 ${isBracketMode ? 'Tabla de Posiciones del Torneo' : 'Resumen del Torneo'} (${modeLabel})</span>
+                        ${isBracketMode
+                            ? `<a href="#leagues" class="text-sm text-primary">Ver Bracket &rarr;</a>`
+                            : `<a href="#stats" class="text-sm text-primary">Tabla Completa &rarr;</a>`}
                     </div>
-                    ${renderMiniStandings(standings, sportTerm)}
+                    ${isBracketMode ? renderBracketStandings(bracketStandings) : renderMiniStandings(standings, sportTerm)}
                 </div>
 
-                <!-- Gráfico 1: Puntos a Favor -->
+                <!-- Gráfico 1: Top Anotadores -->
                 <div class="dashboard-card col-span-4">
-                    <div class="dashboard-card-title">${sportTerm.scoreLabelFor} A Favor</div>
-                    <div class="chart-wrapper">
-                        <canvas id="chartPF"></canvas>
-                    </div>
+                    <div class="dashboard-card-title">${sportTerm.icon} Top ${sportTerm.rankingTitle}</div>
+                    ${topScorers.length === 0
+                        ? `<p class="text-muted text-sm" style="padding:1rem 0;">Aún no hay ${(sportTerm.scoreEventPlural || 'anotaciones').toLowerCase()} registrados.</p>`
+                        : `<div class="chart-wrapper"><canvas id="chartPF"></canvas></div>`
+                    }
                 </div>
 
                 <!-- Gráfico 2: Resultados Globales -->
@@ -131,7 +148,7 @@ export async function renderDashboard(container) {
     `;
 
     // 2. Inicializar Gráficos con Chart.js
-    initCharts(standings, matches);
+    initCharts(standings, matches, sportTerm, topScorers);
 }
 
 function renderEmptyState(container, message) {
@@ -204,30 +221,199 @@ function renderMiniStandings(standings, sportTerm) {
     `;
 }
 
-function initCharts(standings, matches) {
+const BRACKET_ROUND_DEPTH = {
+    'Gran Final': 0,
+    'Final': 0,
+    'Final Perdedores': 1,
+    'Final Ganadores': 1,
+    'Semifinal': 1,
+    'Semifinal Ganadores': 1,
+    'Cuartos de Final': 2,
+    'Cuartos Ganadores': 2,
+    'Octavos de Final': 3,
+    'Octavos Ganadores': 3
+};
+
+function bracketRoundDepth(round) {
+    if (!round) return 99;
+    if (BRACKET_ROUND_DEPTH[round] !== undefined) return BRACKET_ROUND_DEPTH[round];
+    const m = String(round).match(/Ronda\s+(\d+)/i);
+    if (m) return 2 + Number(m[1]);
+    return 4;
+}
+
+function computeBracketStandings(teams, matches) {
+    const finished = matches.filter(m => m.status === 'Finalizado');
+    const nonFinished = matches.filter(m => m.status !== 'Finalizado');
+    const statsMap = new Map();
+
+    teams.forEach(t => {
+        statsMap.set(Number(t.id), {
+            team: t,
+            played: 0,
+            wins: 0,
+            losses: 0,
+            elimDepth: null,
+            isChampion: false,
+            isRunnerUp: false,
+            isActive: false
+        });
+    });
+
+    const finalMatch = finished.find(m => m.round === 'Gran Final' || m.round === 'Final');
+    if (finalMatch && finalMatch.winnerId) {
+        const champ = statsMap.get(Number(finalMatch.winnerId));
+        if (champ) champ.isChampion = true;
+
+        const runnerId = Number(finalMatch.homeTeamId) === Number(finalMatch.winnerId)
+            ? finalMatch.awayTeamId
+            : finalMatch.homeTeamId;
+        const runner = statsMap.get(Number(runnerId));
+        if (runner) runner.isRunnerUp = true;
+    }
+
+    finished.forEach(m => {
+        const homeId = Number(m.homeTeamId);
+        const awayId = Number(m.awayTeamId);
+        if (!homeId || !awayId) return;
+
+        const home = statsMap.get(homeId);
+        const away = statsMap.get(awayId);
+        const winnerId = m.winnerId ? Number(m.winnerId) : null;
+        const depth = bracketRoundDepth(m.round);
+
+        [home, away].forEach((teamStats, idx) => {
+            if (!teamStats) return;
+            const teamId = idx === 0 ? homeId : awayId;
+            teamStats.played++;
+            if (winnerId === teamId) {
+                teamStats.wins++;
+            } else {
+                teamStats.losses++;
+                if (teamStats.elimDepth === null || depth < teamStats.elimDepth) {
+                    teamStats.elimDepth = depth;
+                }
+            }
+        });
+    });
+
+    nonFinished.forEach(m => {
+        if (m.homeTeamId && statsMap.get(Number(m.homeTeamId))) statsMap.get(Number(m.homeTeamId)).isActive = true;
+        if (m.awayTeamId && statsMap.get(Number(m.awayTeamId))) statsMap.get(Number(m.awayTeamId)).isActive = true;
+    });
+
+    const list = Array.from(statsMap.values());
+    list.forEach(s => {
+        if (s.isChampion) {
+            s.elimDepth = null;
+            s.isActive = false;
+        } else if (s.isRunnerUp) {
+            s.elimDepth = 0;
+            s.isActive = false;
+        } else if (s.isActive) {
+            s.elimDepth = null;
+        }
+    });
+
+    const sortOrder = s => s.isChampion ? 0 : s.isRunnerUp ? 1 : s.isActive ? 2 : 3;
+    list.sort((a, b) => {
+        const orderDiff = sortOrder(a) - sortOrder(b);
+        if (orderDiff !== 0) return orderDiff;
+        if (a.isActive && b.isActive) {
+            return (b.wins - a.wins) || a.team.name.localeCompare(b.team.name, 'es');
+        }
+        return (a.elimDepth ?? 99) - (b.elimDepth ?? 99);
+    });
+
+    return list;
+}
+
+function bracketPositionLabel(s) {
+    if (s.isChampion) return '1º';
+    if (s.isRunnerUp) return '2º';
+    if (s.isActive) return '—';
+    const d = s.elimDepth ?? 99;
+    if (d === 1) return '3º-4º';
+    if (d === 2) return '5º-8º';
+    if (d === 3) return '9º-16º';
+    return 'Eliminado';
+}
+
+function bracketStatusBadge(s) {
+    if (s.isChampion) return '<span class="badge-status badge-status-champion">🏆 Campeón</span>';
+    if (s.isRunnerUp) return '<span class="badge-status badge-status-runnerup">🥈 Subcampeón</span>';
+    if (s.isActive) return '<span class="badge-status badge-status-active">En competencia</span>';
+    return '<span class="badge-status badge-status-eliminated">Eliminado</span>';
+}
+
+function renderBracketStandings(standings) {
+    if (!standings || standings.length === 0) {
+        return `<p class="text-muted text-sm">No hay equipos registrados en esta liga.</p>`;
+    }
+
+    return `
+        <table class="dashboard-table">
+            <thead>
+                <tr>
+                    <th style="width: 70px;">Pos.</th>
+                    <th>Equipo</th>
+                    <th>PJ</th>
+                    <th>G</th>
+                    <th>P</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${standings.map(s => {
+                    const posColor = s.isChampion ? '#f59e0b' : s.isRunnerUp ? '#94a3b8' : s.isActive ? '#60a5fa' : '#64748b';
+                    return `
+                        <tr>
+                            <td><strong style="color: ${posColor}; font-size: 0.9rem; white-space: nowrap;">${bracketPositionLabel(s)}</strong></td>
+                            <td><strong style="color: #f8fafc;">${s.team.name}</strong></td>
+                            <td>${s.played}</td>
+                            <td>${s.wins}</td>
+                            <td>${s.losses}</td>
+                            <td>${bracketStatusBadge(s)}</td>
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function initCharts(standings, matches, sportTerm, topScorers) {
     if (typeof Chart === 'undefined') {
         console.warn('Chart.js no está cargado');
         return;
     }
 
     const labels = standings.map(s => s.name);
+    const scorePlural = sportTerm.scoreEventPlural || 'Anotaciones';
 
-    // Gráfico 1: Barras PF (Anotaciones a favor)
+    // Gráfico 1: Top Anotadores (según deporte y liga activa)
     const ctxPF = document.getElementById('chartPF')?.getContext('2d');
     if (ctxPF) {
+        const scorersTop = topScorers.slice(0, 8);
         new Chart(ctxPF, {
             type: 'bar',
             data: {
-                labels: labels,
+                labels: scorersTop.map(p => p.name ? `#${p.number} ${p.name}` : 'Jugador'),
                 datasets: [{
-                    label: 'Anotaciones',
-                    data: standings.map(s => s.stats?.goalsFor || 0),
-                    backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                    label: scorePlural,
+                    data: scorersTop.map(p => p.stats?.goals || 0),
+                    backgroundColor: 'rgba(59, 130, 246, 0.65)',
                     borderColor: 'rgba(59, 130, 246, 1)',
-                    borderWidth: 1
+                    borderWidth: 1,
+                    borderRadius: 6
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+            }
         });
     }
 

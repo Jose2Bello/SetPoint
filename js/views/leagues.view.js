@@ -337,8 +337,7 @@ function renderLeagueMatchesTab(container, league, teams, matches, refreshTab) {
         row.addEventListener('mouseleave', () => { row.style.borderColor = 'rgba(255,255,255,0.07)'; row.style.transform = ''; });
         row.addEventListener('click', () => {
             const matchId = Number(row.dataset.matchId);
-            const match = matches.find(m => Number(m.id) === matchId);
-            if (match) showAdminMatchEditModal(match, teamMap, teams, refreshTab);
+            if (matchId) window.location.hash = `match-detail/${matchId}`;
         });
     });
 
@@ -614,8 +613,7 @@ function renderBracketTab(container, league, teams, matches, refreshTab) {
     container.querySelectorAll('.bracket-match-card').forEach(card => {
         card.addEventListener('click', () => {
             const matchId = Number(card.dataset.matchId);
-            const match = matches.find(m => Number(m.id) === matchId);
-            if (match) showAdminMatchEditModal(match, teamMap, teams, refreshTab);
+            if (matchId) window.location.hash = `match-detail/${matchId}`;
         });
     });
 }

@@ -3,7 +3,11 @@ import { getAllPlayers, createPlayer } from '../db/players.db.js';
 import { getTeamsByLeague } from '../db/teams.db.js';
 import { getActiveLeague } from '../db/leagues.db.js';
 import { initDB } from '../db/connection.js';
+import { getSportConfig } from '../sports-terms.js';
 import { toast } from '../components/toast.js';
+
+const DEFAULT_AVATAR = 'assets/no-image.webp';
+const UPLOAD_ICON = 'assets/upload-icon.png';
 
 export async function renderPlayersView(container) {
     container.innerHTML = '<div class="loading-state"><p>Cargando atletas...</p></div>';
@@ -31,6 +35,7 @@ export async function renderPlayersView(container) {
     const teams = Array.isArray(rawTeams) ? rawTeams : [];
 
     const teamMap = new Map(teams.map(t => [Number(t.id), t.name]));
+    const sportConfig = getSportConfig(activeLeague.sport);
 
     container.innerHTML = `
         <div class="players-view-container" style="display: flex; flex-direction: column; gap: 2rem;">
@@ -129,7 +134,7 @@ export async function renderPlayersView(container) {
         });
     }
 
-    setupPlayerModal(container, teams, activeLeague.id, () => renderPlayersView(container));
+    setupPlayerModal(container, teams, activeLeague.id, sportConfig, () => renderPlayersView(container));
 }
 
 function getPlayerAvatarHTML(player, size = '50px') {
@@ -259,66 +264,72 @@ function renderPlayerCards(container, players, teamMap) {
     `).join('');
 }
 
-function setupPlayerModal(container, teams, activeLeagueId, onSuccess) {
+function setupPlayerModal(container, teams, activeLeagueId, sportConfig, onSuccess) {
     let modalOverlay = document.getElementById('player-modal-overlay');
     if (!modalOverlay) {
         modalOverlay = document.createElement('div');
         modalOverlay.id = 'player-modal-overlay';
         modalOverlay.style.cssText = `
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px);
+            background: rgba(11, 15, 25, 0.85); backdrop-filter: blur(6px);
             display: none; justify-content: center; align-items: center; z-index: 1000;
+            padding: 1rem; box-sizing: border-box;
         `;
         document.body.appendChild(modalOverlay);
     }
 
+    const positions = sportConfig.defaultPositions || ['Jugador'];
+    const sportIcon = sportConfig.icon || '👤';
+
     modalOverlay.innerHTML = `
-        <div class="glass-panel" style="width: 100%; max-width: 450px; padding: 2rem; border-radius: 12px; background: rgba(30, 41, 59, 0.95); box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-            <h2 style="margin-top: 0; margin-bottom: 1.5rem; text-align: center;">Nuevo Jugador</h2>
+        <div class="glass-panel" style="width: 100%; max-width: 600px; padding: 2.25rem; border-radius: 16px; background: rgba(30, 41, 59, 0.97); box-shadow: 0 24px 60px rgba(0,0,0,0.6); border: 1px solid rgba(59, 130, 246, 0.25); max-height: 92vh; overflow-y: auto; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem;">
+                <span style="font-size: 1.7rem; line-height: 1;">${sportIcon}</span>
+                <h2 style="margin: 0; font-size: 1.5rem; font-weight: 800; color: #f8fafc;">Nuevo Jugador</h2>
+            </div>
+            <p style="margin: 0 0 1.75rem 0; font-size: 0.9rem; color: #94a3b8;">Completa los datos del atleta para registrarlo en la liga activa.</p>
             
             <form id="form-new-player">
-                <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 1.5rem;">
-                    <label for="player-photo-input" style="cursor: pointer; text-align: center;">
-                        <div id="photo-preview" style="width: 100px; height: 100px; border-radius: 50%; background: #334155; border: 2px dashed #64748b; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 0.5rem; transition: border-color 0.2s;">
-                            <span style="color: #94a3b8; font-size: 2rem;">📷</span>
-                        </div>
-                        <span style="font-size: 0.85rem; color: #60a5fa; text-decoration: underline;">Subir Foto</span>
-                    </label>
-                    <input type="file" id="player-photo-input" accept="image/*" style="display: none;" />
-                </div>
-
-                <div style="margin-bottom: 1rem;">
-                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem;">Nombre Completo *</label>
-                    <input type="text" id="player-name" class="form-control" required placeholder="Ej. Lionel Messi" style="width: 100%; box-sizing: border-box;" />
-                </div>
-
-                <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-                    <div style="flex: 1;">
-                        <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem;">Dorsal (Número)</label>
-                        <input type="number" id="player-number" class="form-control" placeholder="Ej. 10" style="width: 100%; box-sizing: border-box;" />
+                <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 1.75rem;">
+                    <div style="position: relative; width: 120px; height: 120px; border-radius: 50%; border: 2px dashed #64748b; overflow: hidden; background: #1e293b; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px rgba(0,0,0,0.35); transition: all 0.2s;">
+                        <img id="photo-preview" src="${DEFAULT_AVATAR}" onerror="this.src='${DEFAULT_AVATAR}'" style="width: 120px; height: 120px; max-width: 120px; max-height: 120px; object-fit: cover; display: block;">
+                        <label for="player-photo-input" style="position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                            <img src="${UPLOAD_ICON}" alt="Subir foto" style="width: 32px; height: 32px;">
+                        </label>
                     </div>
-                    <div style="flex: 1;">
-                        <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem;">Posición</label>
-                        <select id="player-position" class="form-control" style="width: 100%; box-sizing: border-box;">
-                            <option value="Delantero">Delantero</option>
-                            <option value="Mediocampista">Mediocampista</option>
-                            <option value="Defensa">Defensa</option>
-                            <option value="Portero">Portero</option>
+                    <input type="file" id="player-photo-input" accept="image/*" style="display: none;" />
+                    <span style="font-size: 0.9rem; color: #60a5fa; text-decoration: underline; font-weight: 600; margin-top: 0.6rem;">Subir Foto del Jugador</span>
+                </div>
+
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">Nombre Completo *</label>
+                    <input type="text" id="player-name" class="form-control" required placeholder="Ej. Lionel Messi" style="width: 100%; box-sizing: border-box; padding: 0.75rem; font-size: 1rem;" />
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">Dorsal (Número)</label>
+                        <input type="number" id="player-number" class="form-control" placeholder="Ej. 10" style="width: 100%; box-sizing: border-box; padding: 0.75rem;" />
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">Posición</label>
+                        <select id="player-position" class="form-control" style="width: 100%; box-sizing: border-box; padding: 0.75rem;">
+                            ${positions.map(pos => `<option value="${pos}">${pos}</option>`).join('')}
                         </select>
                     </div>
                 </div>
 
-                <div style="margin-bottom: 1.5rem;">
-                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem;">Equipo *</label>
-                    <select id="player-team" class="form-control" required style="width: 100%; box-sizing: border-box;">
+                <div style="margin-bottom: 1.75rem;">
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">Equipo *</label>
+                    <select id="player-team" class="form-control" required style="width: 100%; box-sizing: border-box; padding: 0.75rem;">
                         <option value="" disabled selected>Selecciona un equipo...</option>
                         ${teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
                     </select>
                 </div>
 
-                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-                    <button type="button" id="btn-cancel-player" class="btn btn-secondary">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar Jugador</button>
+                <div style="display: flex; gap: 0.75rem; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1.25rem;">
+                    <button type="button" id="btn-cancel-player" class="btn btn-secondary" style="padding: 0.7rem 1.5rem;">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" style="padding: 0.7rem 1.75rem;">Guardar Jugador</button>
                 </div>
             </form>
         </div>
@@ -334,7 +345,7 @@ function setupPlayerModal(container, teams, activeLeagueId, onSuccess) {
             const reader = new FileReader();
             reader.onload = (event) => {
                 base64Image = event.target.result;
-                photoPreview.innerHTML = `<img src="${base64Image}" style="width: 100%; height: 100%; object-fit: cover;" alt="Preview" />`;
+                photoPreview.src = base64Image;
                 photoPreview.style.borderStyle = 'solid';
                 photoPreview.style.borderColor = '#3b82f6';
             };
@@ -349,7 +360,7 @@ function setupPlayerModal(container, teams, activeLeagueId, onSuccess) {
     btnOpen.addEventListener('click', () => {
         form.reset();
         base64Image = null;
-        photoPreview.innerHTML = '<span style="color: #94a3b8; font-size: 2rem;">📷</span>';
+        photoPreview.src = DEFAULT_AVATAR;
         photoPreview.style.borderStyle = 'dashed';
         photoPreview.style.borderColor = '#64748b';
         modalOverlay.style.display = 'flex';

@@ -1,10 +1,8 @@
 // js/views/team-detail.view.js
 import { getTeamById } from '../db/teams.db.js';
-import { getPlayersByTeam, createPlayer } from '../db/players.db.js';
+import { getPlayersByTeam } from '../db/players.db.js';
 import { getAllMatches } from '../db/matches.db.js';
 import { getActiveLeague } from '../db/leagues.db.js';
-import { SPORTS } from '../sports-terms.js';
-import { toast } from '../components/toast.js';
 
 
 export async function renderTeamDetail(container, params) {
@@ -30,7 +28,6 @@ export async function renderTeamDetail(container, params) {
     }
 
     const activeLeague = await getActiveLeague();
-    const sportConfig = SPORTS[activeLeague?.sport] || SPORTS.futbol;
     
     // Forzamos la carga de jugadores por equipo
     const players = await getPlayersByTeam(teamId);
@@ -213,11 +210,7 @@ export async function renderTeamDetail(container, params) {
     squadHeader.className = 'section-header-flex';
     const h2Squad = document.createElement('h2');
     h2Squad.textContent = `Plantilla de Jugadores (${players.length})`;
-    const btnAddPlayer = document.createElement('button');
-    btnAddPlayer.className = 'btn btn-primary';
-    btnAddPlayer.textContent = '+ Agregar Jugador';
     squadHeader.appendChild(h2Squad);
-    squadHeader.appendChild(btnAddPlayer);
     squadSection.appendChild(squadHeader);
 
     const playersGrid = document.createElement('div');
@@ -351,68 +344,6 @@ export async function renderTeamDetail(container, params) {
     }
     container.appendChild(playedMatchesSection);
 
-    // ==========================================
-    // MODAL AGREGAR JUGADOR
-    // ==========================================
-    const modal = document.createElement('div');
-    modal.className = 'modal hidden';
-    modal.innerHTML = `
-        <div class="modal-content glass-panel">
-            <h3>Agregar Jugador a ${team.name}</h3>
-            <form id="team-player-form">
-                <div class="form-group">
-                    <label>Nombre Completo *</label>
-                    <input type="text" name="name" required class="form-control" />
-                </div>
-                <div class="form-group">
-                    <label>URL de Foto (Opcional)</label>
-                    <input type="url" name="photo" class="form-control" placeholder="https://..." />
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Posición *</label>
-                        <select name="position" required class="form-control">
-                            ${(sportConfig.positions || ['Jugador']).map(p => `<option value="${p}">${p}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Dorsal / Número *</label>
-                        <input type="number" name="number" required min="1" max="99" class="form-control" />
-                    </div>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" id="btn-cancel-player" class="btn btn-secondary">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar Jugador</button>
-                </div>
-            </form>
-        </div>
-    `;
-    container.appendChild(modal);
-
-    btnAddPlayer.addEventListener('click', () => modal.classList.remove('hidden'));
-    modal.querySelector('#btn-cancel-player').addEventListener('click', () => modal.classList.add('hidden'));
-
-    modal.querySelector('#team-player-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        
-        const newPlayer = {
-            teamId: Number(teamId),
-            name: formData.get('name'),
-            photo: formData.get('photo'),
-            position: formData.get('position'),
-            number: Number(formData.get('number'))
-        };
-
-        try {
-            await createPlayer(newPlayer);
-            toast.success('Jugador registrado con éxito');
-            modal.classList.add('hidden');
-            renderTeamDetail(container, params);
-        } catch (err) {
-            toast.error(err.message || 'Error al registrar jugador');
-        }
-    });
 }
 
 function renderPointsChart(canvas, finishedMatches, teamId) {
