@@ -11,6 +11,16 @@ import './components/toast.js';
 import './components/footer.js';
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Registrar el Service Worker (PWA / instalable / offline)
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch((err) => {
+            console.error('Error registrando el Service Worker:', err);
+        });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Set Visual Theme Class (Dark mode is default)
     const theme = storage.getTheme();
@@ -39,7 +49,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const appContainer = document.getElementById('app');
                 router.init(appContainer);
             })(),
-            wait(2000) // FORZAR 2 SEGUNDOS MÍNIMOS
+            wait(1000) // FORZAR 1 SEGUNDO MÍNIMO
         ]);
 
     } catch (error) {

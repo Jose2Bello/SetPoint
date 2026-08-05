@@ -242,7 +242,7 @@ export async function renderTeamDetail(container, params) {
                         #${p.number}
                     </div>
                     <div>
-                        <strong style="display: block; color: #f8fafc;">${p.name}</strong>
+                        <strong style="display: block; color: var(--color-text-primary);">${p.name}</strong>
                         <span class="text-muted" style="font-size: 0.85rem;">${p.position || 'Sin posición'}</span>
                     </div>
                 `;
@@ -351,6 +351,12 @@ function renderPointsChart(canvas, finishedMatches, teamId) {
     const width = canvas.width = canvas.parentElement.clientWidth || 600;
     const height = canvas.height = 200;
 
+    const bodyStyles = getComputedStyle(document.body);
+    const accentColor = (bodyStyles.getPropertyValue('--color-accent') || '#3b82f6').trim();
+    const textPrimary = (bodyStyles.getPropertyValue('--color-text-primary') || '#f8fafc').trim();
+    const textMuted = (bodyStyles.getPropertyValue('--color-text-muted') || '#94a3b8').trim();
+    const borderStrong = (bodyStyles.getPropertyValue('--color-border-strong') || '#334155').trim();
+
     const chronologicalMatches = [...finishedMatches].reverse();
     
     let currentPoints = 0;
@@ -368,7 +374,7 @@ function renderPointsChart(canvas, finishedMatches, teamId) {
     });
 
     if (dataPoints.length <= 1) {
-        ctx.fillStyle = '#94a3b8';
+        ctx.fillStyle = textMuted;
         ctx.font = '14px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('Sin datos suficientes para graficar la evolución.', width / 2, height / 2);
@@ -381,14 +387,14 @@ function renderPointsChart(canvas, finishedMatches, teamId) {
 
     ctx.clearRect(0, 0, width, height);
 
-    ctx.strokeStyle = '#334155';
+    ctx.strokeStyle = borderStrong;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(padding, height - padding);
     ctx.lineTo(width - padding, height - padding);
     ctx.stroke();
 
-    ctx.strokeStyle = '#3b82f6';
+    ctx.strokeStyle = accentColor;
     ctx.lineWidth = 3;
     ctx.beginPath();
 
@@ -404,12 +410,12 @@ function renderPointsChart(canvas, finishedMatches, teamId) {
         const x = padding + i * stepX;
         const y = (height - padding) - (pts / maxVal) * (height - padding * 2);
 
-        ctx.fillStyle = '#60a5fa';
+        ctx.fillStyle = accentColor;
         ctx.beginPath();
         ctx.arc(x, y, 5, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = '#f8fafc';
+        ctx.fillStyle = textPrimary;
         ctx.font = '11px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(`${pts}p`, x, y - 10);

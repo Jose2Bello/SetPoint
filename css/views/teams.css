@@ -16,8 +16,8 @@
 
 /* Tarjeta de Equipo */
 .team-card {
-    background: #1e293b;
-    border: 1px solid #334155;
+    background: var(--color-bg-solid);
+    border: 1px solid var(--color-border-strong);
     border-radius: 12px;
     overflow: hidden;
     display: flex;
@@ -46,8 +46,8 @@
     width: 70px;
     height: 70px;
     border-radius: 50%;
-    background: #0f172a;
-    border: 3px solid #1e293b;
+    background: var(--color-bg-solid-deep);
+    border: 3px solid var(--color-bg-solid);
     overflow: hidden;
     display: flex;
     align-items: center;
@@ -77,25 +77,25 @@
 .team-title {
     font-size: 1.1rem;
     font-weight: 700;
-    color: #f8fafc;
+    color: var(--color-text-primary);
     margin: 0;
 }
 
 .team-location {
     font-size: 0.8rem;
-    color: #94a3b8;
+    color: var(--color-text-muted);
     margin: 0;
 }
 
 .team-badge {
     margin-top: 0.5rem;
     display: inline-block;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid #334155;
+    background: var(--color-btn-secondary-bg);
+    border: 1px solid var(--color-border-strong);
     border-radius: 20px;
     padding: 0.25rem 0.75rem;
     font-size: 0.75rem;
-    color: #cbd5e1;
+    color: var(--color-text-secondary);
 }
 
 /* Botones de acción alineados en fila */
@@ -104,8 +104,8 @@
     padding: 1rem;
     display: flex;
     gap: 0.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-    background: rgba(0, 0, 0, 0.1);
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg-solid-deep);
     box-sizing: border-box;
 }
 
@@ -117,8 +117,8 @@
 
 /* Formulario */
 .team-form-card {
-    background: #1e293b;
-    border: 1px solid #334155;
+    background: var(--color-bg-solid);
+    border: 1px solid var(--color-border-strong);
     border-radius: 12px;
     padding: 1.5rem;
     max-width: 600px;
@@ -130,10 +130,10 @@
     width: 90px;
     height: 90px;
     border-radius: 50%;
-    border: 2px dashed #475569;
+    border: 2px dashed var(--color-border-strong);
     overflow: hidden;
     margin: 0 auto;
-    background: #0f172a;
+    background: var(--color-bg-solid-deep);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -219,7 +219,7 @@
 }
 
 .stat-box {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--color-btn-secondary-bg);
     padding: 0.5rem;
     border-radius: 6px;
     text-align: center;
@@ -228,13 +228,13 @@
 }
 
 .stat-box.highlight {
-    background: rgba(59, 130, 246, 0.2);
-    border: 1px solid rgba(59, 130, 246, 0.4);
+    background: rgba(var(--color-accent-rgb), 0.2);
+    border: 1px solid rgba(var(--color-accent-rgb), 0.4);
 }
 
 .stat-box-label {
     font-size: 0.75rem;
-    color: #94a3b8;
+    color: var(--color-text-muted);
 }
 
 .stat-box-value {
@@ -271,7 +271,7 @@
 }
 
 .match-score-pill {
-    background: rgba(255,255,255,0.1);
+    background: var(--color-btn-secondary-bg);
     padding: 0.2rem 0.6rem;
     border-radius: 4px;
     font-weight: bold;
@@ -300,6 +300,7 @@
     overflow-x: auto;
     margin-bottom: 1.5rem;
     border-radius: 12px;
+    background: var(--color-bg-surface);
 }
 
 .tab-btn {
@@ -308,7 +309,7 @@
     gap: 0.5rem;
     background: transparent;
     border: none;
-    color: #94a3b8;
+    color: var(--color-text-muted);
     padding: 0.6rem 1rem;
     border-radius: 8px;
     cursor: pointer;
@@ -318,12 +319,12 @@
 }
 
 .tab-btn:hover {
-    color: #f8fafc;
-    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-text-primary);
+    background: var(--color-btn-secondary-bg);
 }
 
 .tab-btn.active {
-    background: #3b82f6;
+    background: var(--color-accent);
     color: #ffffff;
     font-weight: 600;
 }
@@ -385,7 +386,7 @@
 .team-card-body {
     display: flex;
     justify-content: space-around;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--color-row-hover);
     padding: 0.5rem;
     border-radius: 8px;
 }
@@ -398,7 +399,7 @@
 
 .team-stat-mini .lbl {
     font-size: 0.7rem;
-    color: #94a3b8;
+    color: var(--color-text-muted);
 }
 
 .team-stat-mini .val {

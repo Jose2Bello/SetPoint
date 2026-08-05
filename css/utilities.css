@@ -80,7 +80,7 @@
     font-size: 0.75rem;
     font-weight: 600;
     border-radius: var(--border-radius-full);
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--color-btn-secondary-bg);
     border: 1px solid var(--color-border);
 }
 

@@ -60,13 +60,15 @@ class LeagueNavbar extends HTMLElement {
                 console.error('Error al obtener datos de la liga activa en Navbar:', e);
             }
         }
+
+        const brandLogo = (sportConfig && sportConfig.logo) ? sportConfig.logo : 'assets/Sin título.png';
 this.innerHTML = `
 <header class="header-container">
     <!-- 1. Marca con Logo en Imagen (Izquierda) -->
     <div class="nav-brand">
         <a href="#dashboard" class="brand-link flex align-center gap-sm">
             <div class="logo-grid-container">
-                <img src="assets/setpointlogo.png" alt="SetPoint Logo" class="brand-logo-img" />
+                <img src="${brandLogo}" alt="${sportConfig ? sportConfig.name : 'SetPoint'} Logo" class="brand-logo-img" />
             </div>
         </a>
     </div>

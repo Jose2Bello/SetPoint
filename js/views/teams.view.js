@@ -128,18 +128,18 @@ function renderTeamCard(team) {
     const secondaryColor = team.secondaryColor || '#1e293b';
 
     return `
-        <div class="team-card" style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; align-items: center; position: relative; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); width: 100%;">
+        <div class="team-card" style="background: var(--color-bg-solid); border: 1px solid var(--color-border-strong); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; align-items: center; position: relative; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); width: 100%;">
             
             <div class="team-card-banner" style="height: 60px; width: 100%; display: block; background: linear-gradient(135deg, ${primaryColor} 50%, ${secondaryColor} 50%);"></div>
 
-            <div class="team-shield-wrapper" style="margin-top: -35px; width: 70px; height: 70px; min-width: 70px; min-height: 70px; border-radius: 50%; background: #0f172a; border: 3px solid #1e293b; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 2;">
+            <div class="team-shield-wrapper" style="margin-top: -35px; width: 70px; height: 70px; min-width: 70px; min-height: 70px; border-radius: 50%; background: var(--color-bg-solid-deep); border: 3px solid var(--color-bg-solid); overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 2;">
                 <img src="${shieldUrl}" alt="${team.name}" onerror="this.src='${DEFAULT_SHIELD}'" style="width: 70px; height: 70px; max-width: 70px; max-height: 70px; object-fit: cover; display: block;">
             </div>
 
             <div class="team-card-body" style="padding: 0.75rem 1rem; width: 100%; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
-                <h3 class="team-title" style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin: 0;">${team.name}</h3>
-                <p class="team-location" style="font-size: 0.8rem; color: #94a3b8; margin: 0;">${team.city ? `📍 ${team.city}` : 'Sede no especificada'}</p>
-                <div class="team-badge" style="margin-top: 0.5rem; background: rgba(255, 255, 255, 0.05); border: 1px solid #334155; border-radius: 20px; padding: 0.25rem 0.75rem; font-size: 0.75rem; color: #cbd5e1;">
+                <h3 class="team-title" style="font-size: 1.1rem; font-weight: 700; color: var(--color-text-primary); margin: 0;">${team.name}</h3>
+                <p class="team-location" style="font-size: 0.8rem; color: var(--color-text-muted); margin: 0;">${team.city ? `📍 ${team.city}` : 'Sede no especificada'}</p>
+                <div class="team-badge" style="margin-top: 0.5rem; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--color-border-strong); border-radius: 20px; padding: 0.25rem 0.75rem; font-size: 0.75rem; color: #cbd5e1;">
                     👥 ${team.playerCount || 0} Jugadores
                 </div>
             </div>
@@ -208,7 +208,7 @@ function renderFormView(container, leagueId, teamToEdit = null, defaultSport = '
     const selectedSport = getTeamSport(teamToEdit || { sport: defaultSport });
 
     container.innerHTML = `
-      <div class="team-form-card" style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 1.5rem; max-width: 600px; margin: 0 auto 100px auto;">
+      <div class="team-form-card" style="background: var(--color-bg-solid); border: 1px solid var(--color-border-strong); border-radius: 12px; padding: 1.5rem; max-width: 600px; margin: 0 auto 100px auto;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                 <h2 class="text-xl font-bold">${isEdit ? 'Editar Equipo' : 'Nuevo Equipo'}</h2>
                 <button id="btnBackToList" class="btn btn-secondary text-sm">&larr; Volver</button>
@@ -220,7 +220,7 @@ function renderFormView(container, leagueId, teamToEdit = null, defaultSport = '
                     <!-- Carga de Escudo -->
                     <div style="text-align: center;">
                         <label class="label text-sm mb-2" style="display: block;">Escudo del Equipo</label>
-                        <div class="image-upload-circle" style="position: relative; width: 90px; height: 90px; border-radius: 50%; border: 2px dashed #475569; overflow: hidden; margin: 0 auto; background: #0f172a; display: flex; align-items: center; justify-content: center;">
+                        <div class="image-upload-circle" style="position: relative; width: 90px; height: 90px; border-radius: 50%; border: 2px dashed #475569; overflow: hidden; margin: 0 auto; background: var(--color-bg-solid-deep); display: flex; align-items: center; justify-content: center;">
                             <img id="shieldPreview" src="${processedImageBase64 || DEFAULT_SHIELD}" onerror="this.src='${DEFAULT_SHIELD}'" style="width: 90px; height: 90px; max-width: 90px; max-height: 90px; object-fit: cover; display: block;">
                             
                             <label for="shieldFileInput" style="position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; cursor: pointer;">

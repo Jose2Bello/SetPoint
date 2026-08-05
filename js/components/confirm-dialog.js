@@ -12,7 +12,7 @@ class ConfirmDialog extends HTMLElement {
 
     render() {
         this.innerHTML = `
-            <div id="confirm-modal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(11, 15, 25, 0.8); z-index: 2000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+            <div id="confirm-modal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--color-bg-overlay); z-index: 2000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
                 <div class="glass-card" style="max-width: 450px; width: 90%; padding: var(--spacing-lg);">
                     <h3 id="confirm-title" style="margin-bottom: var(--spacing-sm);">Confirmación</h3>
                     <p id="confirm-message" class="text-secondary" style="margin-bottom: var(--spacing-lg);">¿Estás seguro de realizar esta acción?</p>

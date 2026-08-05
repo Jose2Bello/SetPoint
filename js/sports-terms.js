@@ -11,6 +11,7 @@ export const SPORTS = {
         rankingTitle: 'Goleadores',
         themeClass: 'sport-futbol',
         icon: '⚽',
+        logo: 'assets/Sin título.png',
         defaultPositions: ['Portero', 'Defensa', 'Centrocampista', 'Delantero'],
         infractions: [
             { type: 'Tarjeta Amarilla', key: 'yellowCards', label: '🟨 Tarjeta Amarilla', short: '🟨 Amarilla' },
@@ -27,6 +28,7 @@ export const SPORTS = {
         rankingTitle: 'Encestadores',
         themeClass: 'sport-basquet',
         icon: '🏀',
+        logo: 'assets/set point logo basket.png',
         defaultPositions: ['Base', 'Escolta', 'Alero', 'Ala-Pívot', 'Pívot'],
         infractions: [
             { type: 'Falta Personal', key: 'yellowCards', label: '🟨 Falta Personal', short: '🟨 Falta' },
@@ -43,6 +45,7 @@ export const SPORTS = {
         rankingTitle: 'Anotadores',
         themeClass: 'sport-voleibol',
         icon: '🏐',
+        logo: 'assets/setpoint voley logo.png',
         defaultPositions: ['Colocador', 'Rematador', 'Central', 'Líbero', 'Opuesto'],
         infractions: [
             { type: 'Tarjeta Amarilla', key: 'yellowCards', label: '🟨 Tarjeta Amarilla', short: '🟨 Amarilla' },

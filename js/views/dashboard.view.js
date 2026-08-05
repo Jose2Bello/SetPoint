@@ -22,6 +22,16 @@ export async function renderDashboard(container) {
     }
 
     const sportTerm = getSportConfig(league.sport);
+    const totalMatchesIcon = {
+        futbol: 'assets/partidos_totales%20icon.png',
+        basquet: 'assets/partidos_totales_basket%20icon.png',
+        voleibol: 'assets/partidos_totales%20volley%20icon.png'
+    }[league.sport] || 'assets/partidos_totales%20icon.png';
+    const finalizedMatchesIcon = {
+        futbol: 'assets/partidos_finalizados_icon.png',
+        basquet: 'assets/partidos_finalizados%20basket%20icon.png',
+        voleibol: 'assets/partidos_finalizados%20voley%20icon.png'
+    }[league.sport] || 'assets/partidos_finalizados_icon.png';
     const matches = await matchesDb.getByLeague(league.id);
     const teams = await teamsDb.getByLeague(league.id);
     const players = await getAllPlayers(league.id);
@@ -66,21 +76,21 @@ export async function renderDashboard(container) {
             <!-- Fila de Métricas Rápidas -->
             <div class="metrics-row">
                 <div class="metric-card">
-                    <div class="metric-icon">🛡️</div>
+                    <div class="metric-icon"><img src="assets/teams_icon.png" alt="Equipos" class="metric-icon-img"></div>
                     <div>
                         <div class="metric-val">${totalTeams}</div>
                         <div class="metric-label">Equipos Registrados</div>
                     </div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-icon">⚽</div>
+                    <div class="metric-icon"><img src="${totalMatchesIcon}" alt="Partidos Totales" class="metric-icon-img"></div>
                     <div>
                         <div class="metric-val">${totalMatches}</div>
                         <div class="metric-label">Partidos Totales</div>
                     </div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-icon">🏆</div>
+                    <div class="metric-icon"><img src="${finalizedMatchesIcon}" alt="Partidos Finalizados" class="metric-icon-img metric-icon-img-sm"></div>
                     <div>
                         <div class="metric-val">${completedMatches}</div>
                         <div class="metric-label">Partidos Finalizados</div>
@@ -174,10 +184,10 @@ function renderMatchCard(match, teams, emptyText) {
     return `
         <div class="dash-match-box">
             <div>
-                <strong style="color: #f8fafc; font-size: 1rem;">${home.name}</strong> 
+                <strong style="color: var(--color-text-primary); font-size: 1rem;">${home.name}</strong> 
                 <span style="color: #64748b; margin: 0 0.25rem;">vs</span> 
-                <strong style="color: #f8fafc; font-size: 1rem;">${away.name}</strong>
-                <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 0.35rem;">📅 ${match.date ? new Date(match.date).toLocaleDateString() : 'Fecha no definida'}</div>
+                <strong style="color: var(--color-text-primary); font-size: 1rem;">${away.name}</strong>
+                <div style="font-size: 0.78rem; color: var(--color-text-muted); margin-top: 0.35rem;">📅 ${match.date ? new Date(match.date).toLocaleDateString() : 'Fecha no definida'}</div>
             </div>
             <div class="dash-score-badge">
                 ${scoreDisplay}
@@ -209,7 +219,7 @@ function renderMiniStandings(standings, sportTerm) {
                     return `
                         <tr>
                             <td><span class="rank-pill ${rankClass}">${index + 1}</span></td>
-                            <td><strong style="color: #f8fafc;">${team.name}</strong></td>
+                            <td><strong style="color: var(--color-text-primary);">${team.name}</strong></td>
                             <td>${team.stats?.played || 0}</td>
                             <td>${team.stats?.goalsFor || 0}</td>
                             <td><strong style="color: #10b981; font-size: 0.95rem;">${team.stats?.points || 0}</strong></td>
@@ -369,7 +379,7 @@ function renderBracketStandings(standings) {
                     return `
                         <tr>
                             <td><strong style="color: ${posColor}; font-size: 0.9rem; white-space: nowrap;">${bracketPositionLabel(s)}</strong></td>
-                            <td><strong style="color: #f8fafc;">${s.team.name}</strong></td>
+                            <td><strong style="color: var(--color-text-primary);">${s.team.name}</strong></td>
                             <td>${s.played}</td>
                             <td>${s.wins}</td>
                             <td>${s.losses}</td>
@@ -388,6 +398,10 @@ function initCharts(standings, matches, sportTerm, topScorers) {
         return;
     }
 
+    const bodyStyles = getComputedStyle(document.body);
+    const accentHex = (bodyStyles.getPropertyValue('--color-accent') || '#3b82f6').trim();
+    const accentRgb = (bodyStyles.getPropertyValue('--color-accent-rgb') || '59, 130, 246').trim();
+
     const labels = standings.map(s => s.name);
     const scorePlural = sportTerm.scoreEventPlural || 'Anotaciones';
 
@@ -402,8 +416,8 @@ function initCharts(standings, matches, sportTerm, topScorers) {
                 datasets: [{
                     label: scorePlural,
                     data: scorersTop.map(p => p.stats?.goals || 0),
-                    backgroundColor: 'rgba(59, 130, 246, 0.65)',
-                    borderColor: 'rgba(59, 130, 246, 1)',
+                    backgroundColor: `rgba(${accentRgb}, 0.65)`,
+                    borderColor: accentHex,
                     borderWidth: 1,
                     borderRadius: 6
                 }]
@@ -454,8 +468,8 @@ function initCharts(standings, matches, sportTerm, topScorers) {
                 datasets: [{
                     label: 'Puntos',
                     data: standings.map(s => s.stats?.points || 0),
-                    borderColor: '#8b5cf6',
-                    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                    borderColor: accentHex,
+                    backgroundColor: `rgba(${accentRgb}, 0.2)`,
                     tension: 0.3,
                     fill: true
                 }]
