@@ -1,5 +1,25 @@
 /* css/views/players.css */
 
+/* Encabezados de Gestión de Atletas */
+.players-view-container h1 {
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1.2;
+    color: var(--color-text-primary);
+}
+
+.players-view-container h3,
+.featured-carousel-title h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.players-view-container .glass-panel > h3 {
+    padding-bottom: 0.6rem;
+    border-bottom: 2px solid rgba(var(--color-accent-rgb), 0.25);
+}
+
 .clickable-card {
     transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }

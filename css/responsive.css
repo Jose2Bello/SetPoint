@@ -1,0 +1,135 @@
+/* css/responsive.css */
+/* Ajustes responsive: tablet y móvil. Se carga al final para no afectar desktop. */
+
+/* ===== Tablet ≤ 1024px ===== */
+@media (max-width: 1024px) {
+    main {
+        padding: 1.25rem;
+    }
+}
+
+/* ===== Móvil ≤ 640px ===== */
+@media (max-width: 640px) {
+    /* ---------- Header / Navbar 100% visible ---------- */
+    header {
+        position: static;
+        height: auto;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+        padding: 0.6rem 0.75rem;
+        gap: 0.5rem;
+    }
+    .nav-brand {
+        display: flex;
+        justify-content: center;
+    }
+    .nav-links {
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.25rem 0.9rem;
+    }
+    .nav-links a {
+        font-size: 0.8rem;
+    }
+    .nav-league-info {
+        display: none;
+    }
+
+    /* ---------- Layout principal ---------- */
+    main {
+        margin-top: 0;
+        padding: 0.9rem;
+    }
+    footer {
+        flex-direction: column;
+        gap: 0.5rem;
+        height: auto;
+        padding: 0.75rem 1rem;
+        text-align: center;
+    }
+
+    /* ---------- Encabezados ---------- */
+    .view-header {
+        padding: 1rem;
+    }
+    .view-header h1 {
+        font-size: 1.35rem;
+    }
+    .leagues-header {
+        padding: 1rem;
+    }
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    /* ---------- Grillas a 1 columna ---------- */
+    .leagues-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    .metrics-row {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    .stats-overview-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 0.75rem;
+    }
+    .dashboard-grid {
+        gap: 1rem;
+    }
+    .cards-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+    }
+
+    /* ---------- Cards ---------- */
+    .dashboard-card,
+    .league-card {
+        padding: 1rem;
+    }
+    .metric-card {
+        padding: 1rem;
+    }
+
+    /* ---------- Tablas con scroll horizontal ---------- */
+    .dashboard-card,
+    .entries-table-card,
+    .section-container,
+    .glass-panel {
+        overflow-x: auto;
+    }
+    .dashboard-table,
+    .data-table,
+    .entries-table {
+        min-width: 560px;
+    }
+
+    /* ---------- Bracket ---------- */
+    .bracket-wrapper {
+        gap: 2rem;
+        padding: 1rem 0.5rem 2rem 0.5rem;
+    }
+
+    /* ---------- Formularios ---------- */
+    .form-grid-2col {
+        grid-template-columns: 1fr;
+    }
+
+    /* ---------- Filas de partidos (estilos inline) ---------- */
+    .match-row-card {
+        padding: 0.7rem !important;
+    }
+}
+
+/* ===== Móvil pequeño ≤ 420px ===== */
+@media (max-width: 420px) {
+    .logo-grid-container {
+        height: 48px;
+        max-width: 150px;
+    }
+}
