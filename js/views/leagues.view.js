@@ -97,8 +97,8 @@ function setupListEventListeners(container) {
         if (targetBtn.classList.contains('btn-manage')) {
             renderLeagueDetailView(container, id);
         } else if (targetBtn.classList.contains('btn-activate')) {
-            await transactions.activateLeague(id);
             storage.setActiveLeagueId(id);
+            await transactions.activateLeague(id);
             renderLeagues(container);
         } else if (targetBtn.classList.contains('btn-edit')) {
             const league = await leaguesDb.getById(id);
@@ -166,9 +166,9 @@ async function renderLeagueDetailView(container, leagueId, activeTab = 'bracket'
             <div>
                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
                     <span class="dashboard-badge">${sport.icon} ${sport.name}</span>
-                    <span style="font-size: 0.8rem; color: #94a3b8;">${modeLabel}</span>
+                    <span style="font-size: 0.8rem; color: var(--color-text-muted);">${modeLabel}</span>
                 </div>
-                <h1 style="margin: 0; font-size: 1.75rem; color: #f8fafc;">${league.name}</h1>
+                <h1 style="margin: 0; font-size: 1.75rem; color: var(--color-text-primary);">${league.name}</h1>
                 <p class="text-sm text-muted" style="margin: 0.25rem 0 0 0;">Temporada: ${league.season || 'N/A'}</p>
             </div>
             <button id="btnBackToLeagues" class="btn btn-secondary text-sm">&larr; Volver a Ligas</button>
@@ -234,8 +234,8 @@ async function renderEntriesTab(container, league, enrolledTeams, refreshTab) {
         <div class="entries-table-card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
                 <div>
-                    <h3 style="margin: 0; color: #f8fafc;">Equipos Inscriptos en ${league.name}</h3>
-                    <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #94a3b8;">
+                    <h3 style="margin: 0; color: var(--color-text-primary);">Equipos Inscriptos en ${league.name}</h3>
+                    <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--color-text-muted);">
                         Total: <strong>${enrolledTeams.length}</strong> / ${league.bracketTeamsCount ? league.bracketTeamsCount + ' requeridos para el cuadro' : 'sin límite'}
                     </p>
                 </div>
@@ -259,9 +259,9 @@ async function renderEntriesTab(container, league, enrolledTeams, refreshTab) {
                         ${enrolledTeams.map((t, idx) => `
                             <tr>
                                 <td><strong>${idx + 1}</strong></td>
-                                <td><strong style="color: #f8fafc;">${t.name}</strong></td>
+                                <td><strong style="color: var(--color-text-primary);">${t.name}</strong></td>
                                 <td>${t.city || 'Sin ciudad'}</td>
-                                <td style="font-size: 0.8rem; color: #94a3b8;">${t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'N/A'}</td>
+                                <td style="font-size: 0.8rem; color: var(--color-text-muted);">${t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'N/A'}</td>
                                 <td>
                                     <a href="#team/${t.id}" class="btn btn-sm btn-secondary">Ver Perfil</a>
                                 </td>
@@ -294,9 +294,9 @@ function renderLeagueMatchesTab(container, league, teams, matches, refreshTab) {
     });
 
     container.innerHTML = `
-        <div class="glass-panel" style="padding: 1.5rem; border-radius: 14px; background: rgba(30, 41, 59, 0.65);">
+        <div class="glass-panel" style="padding: 1.5rem; border-radius: 14px; background: var(--color-bg-card);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
-                <h3 style="margin: 0; color: #f8fafc;">📅 Calendario de Partidos</h3>
+                <h3 style="margin: 0; color: var(--color-text-primary);">📅 Calendario de Partidos</h3>
                 <button id="btnAddLeagueMatch" class="btn btn-primary btn-sm">+ Programar Partido</button>
             </div>
 
@@ -313,16 +313,16 @@ function renderLeagueMatchesTab(container, league, teams, matches, refreshTab) {
                             const as = m.score?.away ?? m.awayScore ?? 0;
                             const fin = m.status === 'Finalizado';
                             return `
-                                <div class="league-match-row" data-match-id="${m.id}" style="display: flex; align-items: center; justify-content: space-between; background: rgba(15,23,42,0.55); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 0.75rem 1rem; cursor: pointer; transition: all 0.2s;">
-                                    <div style="flex: 1; text-align: right; font-weight: 600; color: #f8fafc; font-size: 0.95rem;">${home}</div>
+                                <div class="league-match-row" data-match-id="${m.id}" style="display: flex; align-items: center; justify-content: space-between; background: var(--color-bg-solid-deep); border: 1px solid var(--color-border); border-radius: 10px; padding: 0.75rem 1rem; cursor: pointer; transition: all 0.2s;">
+                                    <div style="flex: 1; text-align: right; font-weight: 600; color: var(--color-text-primary); font-size: 0.95rem;">${home}</div>
                                     <div style="min-width: 90px; text-align: center;">
                                         ${fin
-                                            ? `<span style="font-size: 1.15rem; font-weight: 800; color: #f8fafc;">${hs} – ${as}</span>`
+                                            ? `<span style="font-size: 1.15rem; font-weight: 800; color: var(--color-text-primary);">${hs} – ${as}</span>`
                                             : `<span style="font-size: 0.85rem; font-weight: 700; color: #3b82f6;">VS</span>`
                                         }
                                         <div style="font-size: 0.7rem; color: ${statusColor[m.status] || '#94a3b8'}; margin-top: 0.2rem; font-weight: 700;">${m.status || 'Programado'}</div>
                                     </div>
-                                    <div style="flex: 1; font-weight: 600; color: #f8fafc; font-size: 0.95rem;">${away}</div>
+                                    <div style="flex: 1; font-weight: 600; color: var(--color-text-primary); font-size: 0.95rem;">${away}</div>
                                 </div>
                             `;
                         }).join('')}
@@ -334,7 +334,7 @@ function renderLeagueMatchesTab(container, league, teams, matches, refreshTab) {
 
     container.querySelectorAll('.league-match-row').forEach(row => {
         row.addEventListener('mouseenter', () => { row.style.borderColor = '#3b82f6'; row.style.transform = 'translateX(2px)'; });
-        row.addEventListener('mouseleave', () => { row.style.borderColor = 'rgba(255,255,255,0.07)'; row.style.transform = ''; });
+        row.addEventListener('mouseleave', () => { row.style.borderColor = 'var(--color-border)'; row.style.transform = ''; });
         row.addEventListener('click', () => {
             const matchId = Number(row.dataset.matchId);
             if (matchId) window.location.hash = `match-detail/${matchId}`;
@@ -354,36 +354,36 @@ function showAddMatchModal(leagueId, teams, onSuccess) {
     if (!overlay) {
         overlay = document.createElement('div');
         overlay.id = 'add-match-modal';
-        overlay.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.85); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 1000;`;
+        overlay.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--color-bg-overlay); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 1000;`;
         document.body.appendChild(overlay);
     }
 
     const teamOptions = teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
     overlay.style.display = 'flex';
     overlay.innerHTML = `
-        <div class="glass-panel" style="width: 100%; max-width: 460px; padding: 1.75rem; border-radius: 14px; background: rgba(30,41,59,0.95); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-            <h3 style="margin-top:0; text-align:center; color:#f8fafc;">Programar Partido</h3>
+        <div class="glass-panel" style="width: 100%; max-width: 460px; padding: 1.75rem; border-radius: 14px; background: var(--color-bg-modal); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <h3 style="margin-top:0; text-align:center; color:var(--color-text-primary);">Programar Partido</h3>
             <form id="formAddMatch">
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
                     <div>
-                        <label style="display:block; font-size:0.82rem; color:#94a3b8; margin-bottom:0.25rem;">Local *</label>
+                        <label style="display:block; font-size:0.82rem; color:var(--color-text-muted); margin-bottom:0.25rem;">Local *</label>
                         <select id="addMatchHome" class="form-control" required style="width:100%;">
                             <option value="">Seleccionar...</option>${teamOptions}
                         </select>
                     </div>
                     <div>
-                        <label style="display:block; font-size:0.82rem; color:#94a3b8; margin-bottom:0.25rem;">Visitante *</label>
+                        <label style="display:block; font-size:0.82rem; color:var(--color-text-muted); margin-bottom:0.25rem;">Visitante *</label>
                         <select id="addMatchAway" class="form-control" required style="width:100%;">
                             <option value="">Seleccionar...</option>${teamOptions}
                         </select>
                     </div>
                 </div>
                 <div style="margin-bottom:1rem;">
-                    <label style="display:block; font-size:0.82rem; color:#94a3b8; margin-bottom:0.25rem;">Fecha y Hora</label>
+                    <label style="display:block; font-size:0.82rem; color:var(--color-text-muted); margin-bottom:0.25rem;">Fecha y Hora</label>
                     <input type="datetime-local" id="addMatchDate" class="form-control" style="width:100%; box-sizing:border-box;" />
                 </div>
                 <div style="margin-bottom:1.25rem;">
-                    <label style="display:block; font-size:0.82rem; color:#94a3b8; margin-bottom:0.25rem;">Jornada / Ronda (Opcional)</label>
+                    <label style="display:block; font-size:0.82rem; color:var(--color-text-muted); margin-bottom:0.25rem;">Jornada / Ronda (Opcional)</label>
                     <input type="text" id="addMatchRound" class="form-control" placeholder="Ej. 1" style="width:100%; box-sizing:border-box;" />
                 </div>
                 <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
@@ -420,7 +420,7 @@ async function showEnrollTeamModal(leagueId, leagueSport, enrolledIds, onSuccess
     if (!overlay) {
         overlay = document.createElement('div');
         overlay.id = 'enroll-team-modal';
-        overlay.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.85); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 1000;`;
+        overlay.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--color-bg-overlay); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 1000;`;
         document.body.appendChild(overlay);
     }
 
@@ -432,9 +432,9 @@ async function showEnrollTeamModal(leagueId, leagueSport, enrolledIds, onSuccess
 
     overlay.style.display = 'flex';
     overlay.innerHTML = `
-        <div class="glass-panel" style="width: 100%; max-width: 480px; padding: 1.75rem; border-radius: 14px; background: rgba(30,41,59,0.95); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-            <h2 style="margin-top:0; margin-bottom:0.25rem; text-align:center; color:#f8fafc;">Inscribir Equipo</h2>
-            <p style="text-align:center; font-size:0.82rem; color:#94a3b8; margin-top:0; margin-bottom:1.25rem;">Selecciona un equipo existente o crea uno nuevo</p>
+        <div class="glass-panel" style="width: 100%; max-width: 480px; padding: 1.75rem; border-radius: 14px; background: var(--color-bg-modal); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <h2 style="margin-top:0; margin-bottom:0.25rem; text-align:center; color:var(--color-text-primary);">Inscribir Equipo</h2>
+            <p style="text-align:center; font-size:0.82rem; color:var(--color-text-muted); margin-top:0; margin-bottom:1.25rem;">Selecciona un equipo existente o crea uno nuevo</p>
 
             <div style="display:flex; gap:0.5rem; margin-bottom:1.25rem;">
                 <button id="tabPickTeam" class="tab-btn active" style="flex:1;">Equipo Existente</button>
@@ -445,7 +445,7 @@ async function showEnrollTeamModal(leagueId, leagueSport, enrolledIds, onSuccess
                 ${availableTeams.length === 0
                     ? `<p class="text-muted" style="text-align:center; padding:1rem;">No hay equipos disponibles para inscribir. Crea uno nuevo.</p>`
                     : `<div style="margin-bottom:1rem;">
-                        <label style="display:block; font-size:0.82rem; color:#94a3b8; margin-bottom:0.25rem;">Seleccionar Equipo</label>
+                        <label style="display:block; font-size:0.82rem; color:var(--color-text-muted); margin-bottom:0.25rem;">Seleccionar Equipo</label>
                         <select id="selectExistingTeam" class="form-control" style="width:100%;">
                             <option value="">-- Elige un equipo --</option>
                             ${availableOptions}
@@ -461,11 +461,11 @@ async function showEnrollTeamModal(leagueId, leagueSport, enrolledIds, onSuccess
             <div id="panelNewTeam" style="display:none;">
                 <form id="formEnrollTeam">
                     <div style="margin-bottom:1rem;">
-                        <label style="display:block; font-size:0.82rem; color:#94a3b8; margin-bottom:0.25rem;">Nombre del Equipo *</label>
+                        <label style="display:block; font-size:0.82rem; color:var(--color-text-muted); margin-bottom:0.25rem;">Nombre del Equipo *</label>
                         <input type="text" id="enrollTeamName" class="form-control" required placeholder="Ej. Real Madrid FC" style="width:100%; box-sizing:border-box;" />
                     </div>
                     <div style="margin-bottom:1.25rem;">
-                        <label style="display:block; font-size:0.82rem; color:#94a3b8; margin-bottom:0.25rem;">Ciudad / Sede</label>
+                        <label style="display:block; font-size:0.82rem; color:var(--color-text-muted); margin-bottom:0.25rem;">Ciudad / Sede</label>
                         <input type="text" id="enrollTeamCity" class="form-control" placeholder="Ej. Madrid" style="width:100%; box-sizing:border-box;" />
                     </div>
                     <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
@@ -532,7 +532,7 @@ function renderBracketTab(container, league, teams, matches, refreshTab) {
 
         container.innerHTML = `
             <div class="glass-panel text-center" style="padding: 2.5rem 1.5rem; border-radius: 14px;">
-                <h3 style="margin-top: 0; color: #f8fafc;">Cuadro de Eliminación no generado</h3>
+                <h3 style="margin-top: 0; color: var(--color-text-primary);">Cuadro de Eliminación no generado</h3>
                 <p class="text-secondary mb-4">
                     Equipos inscriptos: <strong>${currentCount}</strong> / ${requiredCount} requeridos.
                 </p>
@@ -581,9 +581,9 @@ function renderBracketTab(container, league, teams, matches, refreshTab) {
     });
 
     container.innerHTML = `
-        <div class="glass-panel" style="padding: 1.5rem; border-radius: 14px; background: rgba(30, 41, 59, 0.7);">
+        <div class="glass-panel" style="padding: 1.5rem; border-radius: 14px; background: var(--color-bg-card);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
-                <h3 style="margin: 0; color: #f8fafc;">🏆 Cuadro Torneo de Eliminación</h3>
+                <h3 style="margin: 0; color: var(--color-text-primary);">🏆 Cuadro Torneo de Eliminación</h3>
                 <span class="text-muted" style="font-size: 0.8rem;">Haz clic en un partido como Administrador para ingresar resultados &rarr;</span>
             </div>
 
@@ -746,7 +746,7 @@ function showAdminMatchEditModal(match, teamMap, teams, onSuccess) {
         overlay.id = 'admin-match-modal';
         overlay.style.cssText = `
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px);
+            background: var(--color-bg-overlay); backdrop-filter: blur(4px);
             display: flex; justify-content: center; align-items: center; z-index: 1000;
         `;
         document.body.appendChild(overlay);
@@ -757,15 +757,15 @@ function showAdminMatchEditModal(match, teamMap, teams, onSuccess) {
 
     overlay.style.display = 'flex';
     overlay.innerHTML = `
-        <div class="glass-panel" style="width: 100%; max-width: 440px; padding: 1.75rem; border-radius: 14px; background: rgba(30, 41, 59, 0.95); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-            <h3 style="margin-top: 0; margin-bottom: 0.25rem; text-align: center; color: #f8fafc;">Editar Resultado y Equipos</h3>
-            <p style="text-align: center; font-size: 0.8rem; color: #94a3b8; margin-top: 0; margin-bottom: 1.25rem;">Ronda: ${match.round || 'Eliminatoria'}</p>
+        <div class="glass-panel" style="width: 100%; max-width: 440px; padding: 1.75rem; border-radius: 14px; background: var(--color-bg-modal); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <h3 style="margin-top: 0; margin-bottom: 0.25rem; text-align: center; color: var(--color-text-primary);">Editar Resultado y Equipos</h3>
+            <p style="text-align: center; font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0; margin-bottom: 1.25rem;">Ronda: ${match.round || 'Eliminatoria'}</p>
 
             <form id="formAdminMatch">
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem;">
                     <div style="flex: 1; text-align: center;">
-                        <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem;">Equipo Local</label>
-                        <select id="matchHomeTeamSelect" class="form-control" style="width: 100%; box-sizing: border-box; margin-bottom: 0.5rem; background: #0f172a; color: #f8fafc; border: 1px solid #334155; padding: 0.375rem; border-radius: 6px;">
+                        <label style="display: block; font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: 0.25rem;">Equipo Local</label>
+                        <select id="matchHomeTeamSelect" class="form-control" style="width: 100%; box-sizing: border-box; margin-bottom: 0.5rem; background: var(--color-bg-solid-deep); color: var(--color-text-primary); border: 1px solid var(--color-border-strong); padding: 0.375rem; border-radius: 6px;">
                             <option value="">Por definir</option>
                             ${teams.map(t => `<option value="${t.id}" ${Number(t.id) === Number(match.homeTeamId) ? 'selected' : ''}>${t.name}</option>`).join('')}
                         </select>
@@ -775,8 +775,8 @@ function showAdminMatchEditModal(match, teamMap, teams, onSuccess) {
                     <span style="font-weight: 800; font-size: 1.2rem; color: #64748b; margin-top: 1.25rem;">VS</span>
 
                     <div style="flex: 1; text-align: center;">
-                        <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem;">Equipo Visitante</label>
-                        <select id="matchAwayTeamSelect" class="form-control" style="width: 100%; box-sizing: border-box; margin-bottom: 0.5rem; background: #0f172a; color: #f8fafc; border: 1px solid #334155; padding: 0.375rem; border-radius: 6px;">
+                        <label style="display: block; font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: 0.25rem;">Equipo Visitante</label>
+                        <select id="matchAwayTeamSelect" class="form-control" style="width: 100%; box-sizing: border-box; margin-bottom: 0.5rem; background: var(--color-bg-solid-deep); color: var(--color-text-primary); border: 1px solid var(--color-border-strong); padding: 0.375rem; border-radius: 6px;">
                             <option value="">Por definir</option>
                             ${teams.map(t => `<option value="${t.id}" ${Number(t.id) === Number(match.awayTeamId) ? 'selected' : ''}>${t.name}</option>`).join('')}
                         </select>
@@ -785,7 +785,7 @@ function showAdminMatchEditModal(match, teamMap, teams, onSuccess) {
                 </div>
 
                 <div style="margin-bottom: 1.25rem;">
-                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem;">Estado del Partido</label>
+                    <label style="display: block; font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.25rem;">Estado del Partido</label>
                     <select id="matchStatusSelect" class="form-control" style="width: 100%; box-sizing: border-box;">
                         <option value="Programado" ${match.status === 'Programado' ? 'selected' : ''}>Programado</option>
                         <option value="En Juego" ${match.status === 'En Juego' ? 'selected' : ''}>En Juego</option>
@@ -943,8 +943,8 @@ function renderFormView(container, leagueToEdit = null) {
             const newId = await leaguesDb.create(data);
             const allLeagues = await leaguesDb.getAll();
             if (allLeagues.length === 1) {
-                await transactions.activateLeague(newId);
                 storage.setActiveLeagueId(newId);
+                await transactions.activateLeague(newId);
             }
         }
 

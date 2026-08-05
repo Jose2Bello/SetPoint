@@ -50,7 +50,7 @@ export async function renderPlayersView(container) {
             </div>
 
             <!-- 1. BÚSQUEDA Y LISTA GENERAL (ARRIBA) -->
-            <div class="glass-panel" style="padding: 1.5rem; border-radius: 12px; background: rgba(30, 41, 59, 0.7);">
+            <div class="glass-panel" style="padding: 1.5rem; border-radius: 12px; background: var(--color-bg-card);">
                 <h3 style="margin-top: 0; margin-bottom: 1rem;">Todos los Jugadores</h3>
                 
                 <div class="filters-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
@@ -188,11 +188,11 @@ function renderFeaturedSliderHTML(players, teamMap) {
                         </p>
                         <div class="featured-stats-bar">
                             <div class="featured-stat-item">
-                                <span style="font-size: 0.7rem; color: #94a3b8;">Posición</span>
+                                <span style="font-size: 0.7rem; color: var(--color-text-muted);">Posición</span>
                                 <span class="featured-stat-value">${p.position || 'Jugador'}</span>
                             </div>
                             <div class="featured-stat-item">
-                                <span style="font-size: 0.7rem; color: #94a3b8;">Goles</span>
+                                <span style="font-size: 0.7rem; color: var(--color-text-muted);">Goles</span>
                                 <span class="featured-stat-value">${p.stats?.goals || 0}</span>
                             </div>
                         </div>
@@ -212,24 +212,24 @@ function renderTopScorersHTML(players, teamMap) {
         .slice(0, 5);
 
     return `
-        <div class="glass-panel" style="padding: 1.5rem; border-radius: 12px; background: rgba(30, 41, 59, 0.7);">
+        <div class="glass-panel" style="padding: 1.5rem; border-radius: 12px; background: var(--color-bg-card);">
             <h3 style="margin-top: 0; margin-bottom: 1rem;">🔥 Jugadores con más Anotaciones</h3>
             <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                 ${topScorers.map((p, index) => `
-                    <a href="#player/${p.id}" class="clickable-card" style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid #334155; text-decoration: none; color: inherit;">
+                    <a href="#player/${p.id}" class="clickable-card" style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid var(--color-border-strong); text-decoration: none; color: inherit;">
                         <div style="display: flex; align-items: center; gap: 1rem;">
                             <span style="font-weight: bold; width: 20px; color: ${index === 0 ? '#f59e0b' : index === 1 ? '#94a3b8' : '#b45309'};">
                                 #${index + 1}
                             </span>
                             ${getPlayerAvatarHTML(p, '40px')}
                             <div>
-                                <strong style="color: #f8fafc; font-size: 0.95rem;">${p.name}</strong>
+                                <strong style="color: var(--color-text-primary); font-size: 0.95rem;">${p.name}</strong>
                                 <span style="display: block; font-size: 0.8rem; color: #64748b;">${teamMap.get(Number(p.teamId)) || 'Sin Equipo'}</span>
                             </div>
                         </div>
                         <div style="text-align: right;">
                             <span style="font-size: 1.2rem; font-weight: bold; color: #10b981;">${p.stats?.goals || 0}</span>
-                            <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Goles</span>
+                            <span style="font-size: 0.75rem; color: var(--color-text-muted); display: block;">Goles</span>
                         </div>
                     </a>
                 `).join('')}
@@ -245,7 +245,7 @@ function renderPlayerCards(container, players, teamMap) {
     }
 
     container.innerHTML = players.map(p => `
-        <a href="#player/${p.id}" class="glass-card clickable-card" style="padding: 1rem; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid #334155; display: flex; flex-direction: column; justify-content: space-between; text-decoration: none; color: inherit; cursor: pointer;">
+        <a href="#player/${p.id}" class="glass-card clickable-card" style="padding: 1rem; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--color-border-strong); display: flex; flex-direction: column; justify-content: space-between; text-decoration: none; color: inherit; cursor: pointer;">
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
                     ${getPlayerAvatarHTML(p, '45px')}
@@ -253,12 +253,12 @@ function renderPlayerCards(container, players, teamMap) {
                         #${p.number || '0'}
                     </span>
                 </div>
-                <h4 style="margin: 0.25rem 0; color: #f8fafc; font-size: 1rem;">${p.name}</h4>
+                <h4 style="margin: 0.25rem 0; color: var(--color-text-primary); font-size: 1rem;">${p.name}</h4>
                 <p style="margin: 0; font-size: 0.85rem; color: #64748b;">${teamMap.get(Number(p.teamId)) || 'Sin equipo'}</p>
             </div>
-            <div style="margin-top: 1rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8;">
+            <div style="margin-top: 1rem; padding-top: 0.5rem; border-top: 1px solid var(--color-border); display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--color-text-muted);">
                 <span>Pos: <strong style="color: #60a5fa;">${p.position || 'N/A'}</strong></span>
-                <span>Goles: <strong style="color: #f8fafc;">${p.stats?.goals || 0}</strong></span>
+                <span>Goles: <strong style="color: var(--color-text-primary);">${p.stats?.goals || 0}</strong></span>
             </div>
         </a>
     `).join('');
@@ -271,7 +271,7 @@ function setupPlayerModal(container, teams, activeLeagueId, sportConfig, onSucce
         modalOverlay.id = 'player-modal-overlay';
         modalOverlay.style.cssText = `
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(11, 15, 25, 0.85); backdrop-filter: blur(6px);
+            background: var(--color-bg-overlay); backdrop-filter: blur(6px);
             display: none; justify-content: center; align-items: center; z-index: 1000;
             padding: 1rem; box-sizing: border-box;
         `;
@@ -282,16 +282,16 @@ function setupPlayerModal(container, teams, activeLeagueId, sportConfig, onSucce
     const sportIcon = sportConfig.icon || '👤';
 
     modalOverlay.innerHTML = `
-        <div class="glass-panel" style="width: 100%; max-width: 600px; padding: 2.25rem; border-radius: 16px; background: rgba(30, 41, 59, 0.97); box-shadow: 0 24px 60px rgba(0,0,0,0.6); border: 1px solid rgba(59, 130, 246, 0.25); max-height: 92vh; overflow-y: auto; box-sizing: border-box;">
+        <div class="glass-panel" style="width: 100%; max-width: 600px; padding: 2.25rem; border-radius: 16px; background: var(--color-bg-modal); box-shadow: 0 24px 60px rgba(0,0,0,0.6); border: 1px solid rgba(var(--color-accent-rgb), 0.25); max-height: 92vh; overflow-y: auto; box-sizing: border-box;">
             <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem;">
                 <span style="font-size: 1.7rem; line-height: 1;">${sportIcon}</span>
-                <h2 style="margin: 0; font-size: 1.5rem; font-weight: 800; color: #f8fafc;">Nuevo Jugador</h2>
+                <h2 style="margin: 0; font-size: 1.5rem; font-weight: 800; color: var(--color-text-primary);">Nuevo Jugador</h2>
             </div>
-            <p style="margin: 0 0 1.75rem 0; font-size: 0.9rem; color: #94a3b8;">Completa los datos del atleta para registrarlo en la liga activa.</p>
+            <p style="margin: 0 0 1.75rem 0; font-size: 0.9rem; color: var(--color-text-muted);">Completa los datos del atleta para registrarlo en la liga activa.</p>
             
             <form id="form-new-player">
                 <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 1.75rem;">
-                    <div style="position: relative; width: 120px; height: 120px; border-radius: 50%; border: 2px dashed #64748b; overflow: hidden; background: #1e293b; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px rgba(0,0,0,0.35); transition: all 0.2s;">
+                    <div style="position: relative; width: 120px; height: 120px; border-radius: 50%; border: 2px dashed #64748b; overflow: hidden; background: var(--color-bg-solid); display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px rgba(0,0,0,0.35); transition: all 0.2s;">
                         <img id="photo-preview" src="${DEFAULT_AVATAR}" onerror="this.src='${DEFAULT_AVATAR}'" style="width: 120px; height: 120px; max-width: 120px; max-height: 120px; object-fit: cover; display: block;">
                         <label for="player-photo-input" style="position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; cursor: pointer;">
                             <img src="${UPLOAD_ICON}" alt="Subir foto" style="width: 32px; height: 32px;">
@@ -302,17 +302,17 @@ function setupPlayerModal(container, teams, activeLeagueId, sportConfig, onSucce
                 </div>
 
                 <div style="margin-bottom: 1.25rem;">
-                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">Nombre Completo *</label>
+                    <label style="display: block; font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.35rem;">Nombre Completo *</label>
                     <input type="text" id="player-name" class="form-control" required placeholder="Ej. Lionel Messi" style="width: 100%; box-sizing: border-box; padding: 0.75rem; font-size: 1rem;" />
                 </div>
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
                     <div>
-                        <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">Dorsal (Número)</label>
+                        <label style="display: block; font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.35rem;">Dorsal (Número)</label>
                         <input type="number" id="player-number" class="form-control" placeholder="Ej. 10" style="width: 100%; box-sizing: border-box; padding: 0.75rem;" />
                     </div>
                     <div>
-                        <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">Posición</label>
+                        <label style="display: block; font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.35rem;">Posición</label>
                         <select id="player-position" class="form-control" style="width: 100%; box-sizing: border-box; padding: 0.75rem;">
                             ${positions.map(pos => `<option value="${pos}">${pos}</option>`).join('')}
                         </select>
@@ -320,14 +320,14 @@ function setupPlayerModal(container, teams, activeLeagueId, sportConfig, onSucce
                 </div>
 
                 <div style="margin-bottom: 1.75rem;">
-                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem;">Equipo *</label>
+                    <label style="display: block; font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.35rem;">Equipo *</label>
                     <select id="player-team" class="form-control" required style="width: 100%; box-sizing: border-box; padding: 0.75rem;">
                         <option value="" disabled selected>Selecciona un equipo...</option>
                         ${teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
                     </select>
                 </div>
 
-                <div style="display: flex; gap: 0.75rem; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1.25rem;">
+                <div style="display: flex; gap: 0.75rem; justify-content: flex-end; border-top: 1px solid var(--color-border); padding-top: 1.25rem;">
                     <button type="button" id="btn-cancel-player" class="btn btn-secondary" style="padding: 0.7rem 1.5rem;">Cancelar</button>
                     <button type="submit" class="btn btn-primary" style="padding: 0.7rem 1.75rem;">Guardar Jugador</button>
                 </div>

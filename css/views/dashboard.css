@@ -13,8 +13,8 @@
     flex-wrap: wrap;
     gap: 1rem;
     padding: 1.5rem;
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.95));
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-header-gradient);
+    border: 1px solid var(--color-border);
     border-radius: 16px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
@@ -23,7 +23,7 @@
     margin: 0;
     font-size: 1.75rem;
     font-weight: 800;
-    color: #f8fafc;
+    color: var(--color-text-primary);
 }
 
 .dashboard-header-info {
@@ -37,10 +37,10 @@
     border-radius: 9999px;
     font-size: 0.85rem;
     font-weight: 700;
-    background: rgba(59, 130, 246, 0.15);
-    color: #60a5fa;
-    border: 1px solid rgba(59, 130, 246, 0.4);
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+    background: rgba(var(--color-accent-rgb), 0.15);
+    color: var(--color-accent);
+    border: 1px solid rgba(var(--color-accent-rgb), 0.4);
+    box-shadow: 0 2px 8px rgba(var(--color-accent-rgb), 0.2);
 }
 
 /* Quick Metrics Row */
@@ -51,8 +51,8 @@
 }
 
 .metric-card {
-    background: rgba(30, 41, 59, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: 12px;
     padding: 1.25rem;
     display: flex;
@@ -63,15 +63,15 @@
 
 .metric-card:hover {
     transform: translateY(-3px);
-    border-color: rgba(59, 130, 246, 0.4);
+    border-color: rgba(var(--color-accent-rgb), 0.4);
 }
 
 .metric-icon {
     width: 48px;
     height: 48px;
     border-radius: 12px;
-    background: rgba(59, 130, 246, 0.15);
-    color: #60a5fa;
+    background: rgba(var(--color-accent-rgb), 0.15);
+    color: var(--color-accent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -79,16 +79,28 @@
     flex-shrink: 0;
 }
 
+.metric-icon-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.metric-icon-img-sm {
+    width: 76%;
+    height: 76%;
+}
+
 .metric-val {
     font-size: 1.5rem;
     font-weight: 800;
-    color: #f8fafc;
+    color: var(--color-text-primary);
     line-height: 1.1;
 }
 
 .metric-label {
     font-size: 0.8rem;
-    color: #94a3b8;
+    color: var(--color-text-muted);
 }
 
 /* Dashboard Grid */
@@ -112,8 +124,8 @@
 }
 
 .dashboard-card {
-    background: linear-gradient(145deg, rgba(30, 41, 59, 0.75), rgba(15, 23, 42, 0.85));
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-surface-gradient);
+    border: 1px solid var(--color-border);
     border-radius: 14px;
     padding: 1.25rem 1.5rem;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
@@ -125,18 +137,18 @@
     font-size: 1.05rem;
     font-weight: 700;
     margin-bottom: 1.25rem;
-    color: #f8fafc;
+    color: var(--color-text-primary);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid var(--color-border);
     padding-bottom: 0.75rem;
 }
 
 /* Match Cards inside Dashboard */
 .dash-match-box {
-    background: rgba(15, 23, 42, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--color-bg-solid-deep);
+    border: 1px solid var(--color-border);
     border-radius: 10px;
     padding: 1rem;
     display: flex;
@@ -145,7 +157,7 @@
 }
 
 .dash-score-badge {
-    background: #3b82f6;
+    background: var(--color-accent);
     color: #ffffff;
     font-weight: 800;
     font-size: 1.1rem;
@@ -164,20 +176,20 @@
 .dashboard-table th {
     text-align: left;
     padding: 0.6rem 0.8rem;
-    color: #94a3b8;
+    color: var(--color-text-muted);
     font-size: 0.75rem;
     text-transform: uppercase;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .dashboard-table td {
     padding: 0.65rem 0.8rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-    color: #e2e8f0;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-primary);
 }
 
 .dashboard-table tr:hover td {
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--color-row-hover);
 }
 
 .rank-pill {
@@ -194,7 +206,7 @@
 .rank-1 { background: #f59e0b; color: #0f172a; }
 .rank-2 { background: #94a3b8; color: #0f172a; }
 .rank-3 { background: #d97706; color: #ffffff; }
-.rank-default { background: rgba(255,255,255,0.08); color: #94a3b8; }
+.rank-default { background: var(--color-btn-secondary-bg); color: var(--color-text-muted); }
 
 /* Status Badges (Tabla de Posiciones Bracket) */
 .badge-status {
@@ -216,14 +228,14 @@
 
 .badge-status-runnerup {
     background: rgba(148, 163, 184, 0.15);
-    color: #cbd5e1;
+    color: var(--color-text-muted);
     border: 1px solid rgba(148, 163, 184, 0.4);
 }
 
 .badge-status-active {
-    background: rgba(59, 130, 246, 0.15);
-    color: #60a5fa;
-    border: 1px solid rgba(59, 130, 246, 0.4);
+    background: rgba(var(--color-accent-rgb), 0.15);
+    color: var(--color-accent);
+    border: 1px solid rgba(var(--color-accent-rgb), 0.4);
 }
 
 .badge-status-eliminated {
@@ -243,13 +255,13 @@
     margin-top: 1rem;
     padding: 1.25rem 1.5rem;
     border-radius: 12px;
-    background: rgba(15, 23, 42, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
     gap: 1rem;
     font-size: 0.85rem;
-    color: #94a3b8;
+    color: var(--color-text-muted);
 }

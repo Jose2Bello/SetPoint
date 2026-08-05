@@ -11,7 +11,7 @@ import { confirmAction } from '../components/confirm-dialog.js';
 
 export async function renderMatches(container) {
     container.innerHTML = `
-        <div style="display: flex; justify-content: center; align-items: center; height: 200px; color: #94a3b8; font-size: 0.9rem;">
+        <div style="display: flex; justify-content: center; align-items: center; height: 200px; color: var(--color-text-muted); font-size: 0.9rem;">
             Cargando partidos...
         </div>`;
 
@@ -20,8 +20,8 @@ export async function renderMatches(container) {
         container.innerHTML = `
             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 1.5rem; gap: 1rem; text-align: center;">
                 <div style="font-size: 3rem; opacity: 0.4;">🏟️</div>
-                <h2 style="margin: 0; color: #f8fafc; font-size: 1.4rem;">No hay liga activa</h2>
-                <p style="margin: 0; color: #94a3b8;">Selecciona o crea una liga para ver sus partidos.</p>
+                <h2 style="margin: 0; color: var(--color-text-primary); font-size: 1.4rem;">No hay liga activa</h2>
+                <p style="margin: 0; color: var(--color-text-muted);">Selecciona o crea una liga para ver sus partidos.</p>
                 <a href="#leagues" class="btn btn-primary" style="margin-top: 0.5rem;">Ir a Ligas</a>
             </div>`;
         return;
@@ -68,8 +68,8 @@ function render(container, activeLeague, teams, matches) {
             <!-- Header -->
             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
                 <div>
-                    <h1 style="margin: 0 0 0.25rem 0; color: #f8fafc; font-size: 1.6rem; font-weight: 800;">Calendario de Partidos</h1>
-                    <p style="margin: 0; color: #94a3b8; font-size: 0.875rem;">
+                    <h1 style="margin: 0 0 0.25rem 0; color: var(--color-text-primary); font-size: 1.6rem; font-weight: 800;">Calendario de Partidos</h1>
+                    <p style="margin: 0; color: var(--color-text-muted); font-size: 0.875rem;">
                         Liga activa: <strong style="color: #60a5fa;">${activeLeague.name}</strong>
                         &nbsp;·&nbsp;
                         ${isLeagueMode ? 'Liga Regular' : 'Eliminación Directa'}
@@ -84,16 +84,16 @@ function render(container, activeLeague, teams, matches) {
             <!-- Stats Row -->
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
                 <div class="glass-panel" style="padding: 1rem; border-radius: 10px; text-align: center;">
-                    <div style="font-size: 1.5rem; font-weight: 800; color: #f8fafc;">${total}</div>
-                    <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.15rem;">Total Partidos</div>
+                    <div style="font-size: 1.5rem; font-weight: 800; color: var(--color-text-primary);">${total}</div>
+                    <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.15rem;">Total Partidos</div>
                 </div>
                 <div class="glass-panel" style="padding: 1rem; border-radius: 10px; text-align: center;">
                     <div style="font-size: 1.5rem; font-weight: 800; color: #10b981;">${finished}</div>
-                    <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.15rem;">Finalizados</div>
+                    <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.15rem;">Finalizados</div>
                 </div>
                 <div class="glass-panel" style="padding: 1rem; border-radius: 10px; text-align: center;">
                     <div style="font-size: 1.5rem; font-weight: 800; color: #3b82f6;">${scheduled}</div>
-                    <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.15rem;">Programados</div>
+                    <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.15rem;">Programados</div>
                 </div>
             </div>
 
@@ -118,20 +118,20 @@ function render(container, activeLeague, teams, matches) {
 
         <!-- Programar Partido Modal (Liga mode) -->
         ${isLeagueMode ? `
-        <div id="addMatchModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.88); backdrop-filter:blur(4px); z-index:1000; align-items:center; justify-content:center;">
-            <div class="glass-panel" style="width:100%; max-width:480px; padding:1.75rem; border-radius:14px; background:rgba(30,41,59,0.97); box-shadow:0 16px 48px rgba(0,0,0,0.6);">
-                <h3 style="margin-top:0; text-align:center; color:#f8fafc; font-size:1.1rem;">Programar Nuevo Partido</h3>
+        <div id="addMatchModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:var(--color-bg-overlay); backdrop-filter:blur(4px); z-index:1000; align-items:center; justify-content:center;">
+            <div class="glass-panel" style="width:100%; max-width:480px; padding:1.75rem; border-radius:14px; background:var(--color-bg-modal); box-shadow:0 16px 48px rgba(0,0,0,0.6);">
+                <h3 style="margin-top:0; text-align:center; color:var(--color-text-primary); font-size:1.1rem;">Programar Nuevo Partido</h3>
                 <form id="addMatchForm">
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:0.75rem;">
                         <div>
-                            <label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:0.2rem;">Local *</label>
+                            <label style="display:block; font-size:0.8rem; color:var(--color-text-muted); margin-bottom:0.2rem;">Local *</label>
                             <select name="homeTeamId" class="form-control" required style="width:100%;">
                                 <option value="">Elegir equipo...</option>
                                 ${teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
                             </select>
                         </div>
                         <div>
-                            <label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:0.2rem;">Visitante *</label>
+                            <label style="display:block; font-size:0.8rem; color:var(--color-text-muted); margin-bottom:0.2rem;">Visitante *</label>
                             <select name="awayTeamId" class="form-control" required style="width:100%;">
                                 <option value="">Elegir equipo...</option>
                                 ${teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
@@ -140,11 +140,11 @@ function render(container, activeLeague, teams, matches) {
                     </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1.25rem;">
                         <div>
-                            <label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:0.2rem;">Fecha y Hora</label>
+                            <label style="display:block; font-size:0.8rem; color:var(--color-text-muted); margin-bottom:0.2rem;">Fecha y Hora</label>
                             <input type="datetime-local" name="date" class="form-control" style="width:100%; box-sizing:border-box;" />
                         </div>
                         <div>
-                            <label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:0.2rem;">Jornada</label>
+                            <label style="display:block; font-size:0.8rem; color:var(--color-text-muted); margin-bottom:0.2rem;">Jornada</label>
                             <input type="text" name="round" class="form-control" placeholder="Ej. 1" style="width:100%; box-sizing:border-box;" />
                         </div>
                     </div>
@@ -158,15 +158,15 @@ function render(container, activeLeague, teams, matches) {
         ` : ''}
 
         <!-- MODAL UNIFICADO DE GESTIÓN DE PARTIDO -->
-        <div id="editMatchModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.88); backdrop-filter:blur(4px); z-index:1000; align-items:center; justify-content:center;">
-            <div class="glass-panel" style="width:100%; max-width:580px; padding:1.75rem; border-radius:14px; background:rgba(30,41,59,0.97); box-shadow:0 16px 48px rgba(0,0,0,0.6); max-height:90vh; overflow-y:auto;">
-                <h3 id="editMatchTitle" style="margin-top:0; text-align:center; color:#f8fafc; font-size:1.2rem; font-weight:800;">Editar Resultado y Equipos</h3>
-                <p id="editMatchRound" style="text-align:center; font-size:0.8rem; color:#94a3b8; margin-top:0.2rem; margin-bottom:1rem;"></p>
+        <div id="editMatchModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:var(--color-bg-overlay); backdrop-filter:blur(4px); z-index:1000; align-items:center; justify-content:center;">
+            <div class="glass-panel" style="width:100%; max-width:580px; padding:1.75rem; border-radius:14px; background:var(--color-bg-modal); box-shadow:0 16px 48px rgba(0,0,0,0.6); max-height:90vh; overflow-y:auto;">
+                <h3 id="editMatchTitle" style="margin-top:0; text-align:center; color:var(--color-text-primary); font-size:1.2rem; font-weight:800;">Editar Resultado y Equipos</h3>
+                <p id="editMatchRound" style="text-align:center; font-size:0.8rem; color:var(--color-text-muted); margin-top:0.2rem; margin-bottom:1rem;"></p>
                 
                 <!-- Equipos y Marcador -->
-                <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:0.75rem; align-items:center; margin-bottom:1.25rem; background:rgba(15,23,42,0.5); padding:1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:0.75rem; align-items:center; margin-bottom:1.25rem; background:var(--color-bg-solid-deep); padding:1rem; border-radius:10px; border:1px solid var(--color-border);">
                     <div style="text-align:center;">
-                        <label style="display:block; font-size:0.75rem; color:#94a3b8; margin-bottom:0.3rem;">Equipo Local</label>
+                        <label style="display:block; font-size:0.75rem; color:var(--color-text-muted); margin-bottom:0.3rem;">Equipo Local</label>
                         <select id="editHomeTeam" class="form-control" style="width:100%; font-size:0.85rem; margin-bottom:0.5rem;"></select>
                         <input type="number" id="editHomeScore" min="0" class="form-control" style="width:75px; text-align:center; margin:0 auto; font-size:1.25rem; font-weight:800;" />
                     </div>
@@ -174,7 +174,7 @@ function render(container, activeLeague, teams, matches) {
                     <div style="font-size:1.1rem; font-weight:800; color:#60a5fa; text-align:center;">VS</div>
                     
                     <div style="text-align:center;">
-                        <label style="display:block; font-size:0.75rem; color:#94a3b8; margin-bottom:0.3rem;">Equipo Visitante</label>
+                        <label style="display:block; font-size:0.75rem; color:var(--color-text-muted); margin-bottom:0.3rem;">Equipo Visitante</label>
                         <select id="editAwayTeam" class="form-control" style="width:100%; font-size:0.85rem; margin-bottom:0.5rem;"></select>
                         <input type="number" id="editAwayScore" min="0" class="form-control" style="width:75px; text-align:center; margin:0 auto; font-size:1.25rem; font-weight:800;" />
                     </div>
@@ -182,7 +182,7 @@ function render(container, activeLeague, teams, matches) {
 
                 <!-- Estado del Partido -->
                 <div style="margin-bottom:1.25rem;">
-                    <label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:0.3rem;">Estado del Partido</label>
+                    <label style="display:block; font-size:0.8rem; color:var(--color-text-muted); margin-bottom:0.3rem;">Estado del Partido</label>
                     <select id="editMatchStatus" class="form-control" style="width:100%;">
                         <option value="Programado">Programado</option>
                         <option value="En Juego">En Juego</option>
@@ -191,26 +191,26 @@ function render(container, activeLeague, teams, matches) {
                 </div>
 
                 <!-- Registro de Eventos (Goles / Infracciones) -->
-                <div class="glass-panel" style="padding:1rem; margin-bottom:1.25rem; background:rgba(15,23,42,0.4); border-radius:10px; border:1px solid rgba(96,165,250,0.2);">
+                <div class="glass-panel" style="padding:1rem; margin-bottom:1.25rem; background:var(--color-bg-solid-deep); border-radius:10px; border:1px solid rgba(96,165,250,0.2);">
                     <h4 style="margin-top:0; margin-bottom:0.6rem; font-size:0.88rem; color:#60a5fa;">⚡ Registrar Anotación o Infracción</h4>
                     <form id="quickEventForm" style="display:flex; flex-direction:column; gap:0.6rem;">
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
                             <div>
-                                <label style="font-size:0.75rem; color:#94a3b8;">Equipo</label>
+                                <label style="font-size:0.75rem; color:var(--color-text-muted);">Equipo</label>
                                 <select id="quickEventTeam" class="form-control" style="width:100%; font-size:0.8rem;"></select>
                             </div>
                             <div>
-                                <label style="font-size:0.75rem; color:#94a3b8;">Jugador</label>
+                                <label style="font-size:0.75rem; color:var(--color-text-muted);">Jugador</label>
                                 <select id="quickEventPlayer" class="form-control" style="width:100%; font-size:0.8rem;" required></select>
                             </div>
                         </div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
                             <div>
-                                <label style="font-size:0.75rem; color:#94a3b8;">Tipo de Evento</label>
+                                <label style="font-size:0.75rem; color:var(--color-text-muted);">Tipo de Evento</label>
                                 <select id="quickEventType" class="form-control" style="width:100%; font-size:0.8rem;"></select>
                             </div>
                             <div>
-                                <label style="font-size:0.75rem; color:#94a3b8;">Minuto</label>
+                                <label style="font-size:0.75rem; color:var(--color-text-muted);">Minuto</label>
                                 <input type="number" id="quickEventMinute" class="form-control" min="1" max="120" placeholder="Ej. 45" style="width:100%; font-size:0.8rem;" />
                             </div>
                         </div>
@@ -240,7 +240,7 @@ function render(container, activeLeague, teams, matches) {
     function renderList(matchesToShow) {
         if (matchesToShow.length === 0) {
             listContainer.innerHTML = `
-                <div style="text-align:center; padding:3rem 1.5rem; color:#94a3b8;">
+                <div style="text-align:center; padding:3rem 1.5rem; color:var(--color-text-muted);">
                     <div style="font-size:2.5rem; margin-bottom:0.75rem; opacity:0.5;">🏟️</div>
                     <p style="margin:0;">No hay partidos que coincidan con los filtros.</p>
                 </div>`;
@@ -278,17 +278,17 @@ function render(container, activeLeague, teams, matches) {
                         return `
                         <div class="match-row-card" data-match-id="${m.id}" style="
                             display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:0.5rem;
-                            background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.07);
+                            background:var(--color-bg-solid-deep); border:1px solid var(--color-border);
                             border-radius:10px; padding:0.85rem 1rem; cursor:pointer;
                             transition:border-color 0.2s, transform 0.15s;
                         ">
                             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.15rem;">
-                                <span style="font-weight:700; color:#f8fafc; font-size:0.95rem; text-align:right;">${homeName}</span>
+                                <span style="font-weight:700; color:var(--color-text-primary); font-size:0.95rem; text-align:right;">${homeName}</span>
                                 ${isFinished && Number(hs) > Number(as) ? '<span style="font-size:0.65rem; color:#10b981; font-weight:700;">GANADOR</span>' : '<span style="font-size:0.65rem; color:transparent;">-</span>'}
                             </div>
                             <div style="text-align:center; min-width:100px;">
                                 ${isFinished
-                                    ? `<div style="font-size:1.35rem; font-weight:900; color:#f8fafc; letter-spacing:2px;">${hs} — ${as}</div>`
+                                    ? `<div style="font-size:1.35rem; font-weight:900; color:var(--color-text-primary); letter-spacing:2px;">${hs} — ${as}</div>`
                                     : `<div style="font-size:0.85rem; font-weight:800; color:#3b82f6; letter-spacing:1px;">VS</div>`
                                 }
                                 <div style="margin-top:0.3rem;">
@@ -299,7 +299,7 @@ function render(container, activeLeague, teams, matches) {
                                 ${dateStr ? `<div style="font-size:0.65rem; color:#64748b; margin-top:0.2rem;">${dateStr}</div>` : ''}
                             </div>
                             <div style="display:flex; flex-direction:column; align-items:flex-start; gap:0.15rem;">
-                                <span style="font-weight:700; color:#f8fafc; font-size:0.95rem;">${awayName}</span>
+                                <span style="font-weight:700; color:var(--color-text-primary); font-size:0.95rem;">${awayName}</span>
                                 ${isFinished && Number(as) > Number(hs) ? '<span style="font-size:0.65rem; color:#10b981; font-weight:700;">GANADOR</span>' : '<span style="font-size:0.65rem; color:transparent;">-</span>'}
                             </div>
                         </div>`;
@@ -310,7 +310,7 @@ function render(container, activeLeague, teams, matches) {
 
         listContainer.querySelectorAll('.match-row-card').forEach(card => {
             card.addEventListener('mouseenter', () => { card.style.borderColor = 'rgba(96,165,250,0.4)'; card.style.transform = 'translateY(-1px)'; });
-            card.addEventListener('mouseleave', () => { card.style.borderColor = 'rgba(255,255,255,0.07)'; card.style.transform = ''; });
+            card.addEventListener('mouseleave', () => { card.style.borderColor = 'var(--color-border)'; card.style.transform = ''; });
             card.addEventListener('click', () => {
                 const matchId = Number(card.dataset.matchId);
                 openEditModal(matchId);
@@ -514,7 +514,7 @@ function render(container, activeLeague, teams, matches) {
     function renderQuickEventsList(playerMap) {
         const listDiv = container.querySelector('#quickEventsList');
         if (currentMatchEvents.length === 0) {
-            listDiv.innerHTML = `<p style="color:#94a3b8; margin:0; font-size:0.8rem; text-align:center;">No hay eventos registrados aún.</p>`;
+            listDiv.innerHTML = `<p style="color:var(--color-text-muted); margin:0; font-size:0.8rem; text-align:center;">No hay eventos registrados aún.</p>`;
             return;
         }
 
@@ -527,7 +527,7 @@ function render(container, activeLeague, teams, matches) {
                     const isInf = isInfraction(ev.type);
                     const color = isInf ? (ev.type.toLowerCase().includes('roja') ? '#ef4444' : '#f59e0b') : '#10b981';
                     return `
-                        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.6); padding:0.35rem 0.6rem; border-radius:6px; font-size:0.78rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:var(--color-bg-solid-deep); padding:0.35rem 0.6rem; border-radius:6px; font-size:0.78rem;">
                             <span><strong>Min ${ev.minute || 'S/N'}</strong>: <strong style="color:${color};">${ev.type}</strong> - ${pName}</span>
                             <button type="button" class="btn-del-event" data-ev-id="${ev.id}" style="background:none; border:none; color:#ef4444; cursor:pointer; font-weight:bold;">✖</button>
                         </div>

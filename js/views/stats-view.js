@@ -81,7 +81,7 @@ export async function renderStats(container) {
     pSub.textContent = 'Resumen general de la liga: ';
     const strongLeague = document.createElement('strong');
     strongLeague.textContent = `${sportConfig.icon} ${activeLeague.name}`;
-    strongLeague.style.color = '#f8fafc';
+    strongLeague.style.color = 'var(--color-text-primary)';
     pSub.appendChild(strongLeague);
     headerDiv.appendChild(h1);
     headerDiv.appendChild(pSub);
@@ -114,7 +114,7 @@ export async function renderStats(container) {
     };
 
     kpiGrid.appendChild(createKpiCard('Partidos Jugados', `${finishedMatches.length} / ${matches.length}`, 'Completados en el calendario'));
-    kpiGrid.appendChild(createKpiCard(`${sportConfig.scoreEvent}s Totales`, totalGoals, `Promedio de ${avgGoals} por partido`));
+    kpiGrid.appendChild(createKpiCard(`${sportConfig.scoreEventPlural} Totales`, totalGoals, `Promedio de ${avgGoals} por partido`));
     kpiGrid.appendChild(createKpiCard('Infracciones Totales', `${totalYellows + totalReds}`, `🟨 ${totalYellows} Amarillas / Faltas · 🟥 ${totalReds} Rojas`));
     kpiGrid.appendChild(createKpiCard('Atletas Registrados', players.length, 'Plantel total de la liga'));
     
@@ -148,7 +148,7 @@ export async function renderStats(container) {
                         return `
                             <tr>
                                 <td><strong>${idx + 1}</strong></td>
-                                <td><strong style="color:#f8fafc;">#${p.number} ${p.name}</strong></td>
+                                <td><strong style="color:var(--color-text-primary);">#${p.number} ${p.name}</strong></td>
                                 <td>${team ? team.name : '-'}</td>
                                 <td><strong style="color:#10b981; font-size:1rem;">${p.goals}</strong></td>
                             </tr>
@@ -188,7 +188,7 @@ export async function renderStats(container) {
                         return `
                             <tr>
                                 <td><strong>${idx + 1}</strong></td>
-                                <td><strong style="color:#f8fafc;">#${p.number} ${p.name}</strong></td>
+                                <td><strong style="color:var(--color-text-primary);">#${p.number} ${p.name}</strong></td>
                                 <td>${team ? team.name : '-'}</td>
                                 <td><span style="color:#f59e0b; font-weight:700;">${p.yellow}</span></td>
                                 <td><span style="color:#ef4444; font-weight:700;">${p.red}</span></td>
@@ -219,6 +219,9 @@ export async function renderStats(container) {
         setTimeout(() => {
             const ctx = document.getElementById('chartStatsScorers')?.getContext('2d');
             if (ctx) {
+                const bodyStyles = getComputedStyle(document.body);
+                const accentHex = (bodyStyles.getPropertyValue('--color-accent') || '#10b981').trim();
+                const accentRgb = (bodyStyles.getPropertyValue('--color-accent-rgb') || '16, 185, 129').trim();
                 const top6 = topScorers.slice(0, 6);
                 new Chart(ctx, {
                     type: 'bar',
@@ -227,8 +230,8 @@ export async function renderStats(container) {
                         datasets: [{
                             label: `${sportConfig.scoreEventPlural || 'Anotaciones'}`,
                             data: top6.map(p => p.goals),
-                            backgroundColor: 'rgba(16, 185, 129, 0.65)',
-                            borderColor: 'rgba(16, 185, 129, 1)',
+                            backgroundColor: `rgba(${accentRgb}, 0.65)`,
+                            borderColor: accentHex,
                             borderWidth: 1,
                             borderRadius: 6
                         }]

@@ -7,7 +7,7 @@ input[type="datetime-local"],
 select,
 textarea {
     width: 100%;
-    background: rgba(11, 15, 25, 0.5);
+    background: var(--color-bg-input);
     border: 1px solid var(--color-border);
     border-radius: var(--border-radius-sm);
     padding: 0.625rem 0.875rem;
@@ -69,13 +69,13 @@ label {
 }
 
 .btn-secondary {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--color-btn-secondary-bg);
     border: 1px solid var(--color-border);
     color: var(--color-text-primary);
 }
 
 .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--color-btn-secondary-bg-hover);
     border-color: var(--color-border-hover);
 }
 

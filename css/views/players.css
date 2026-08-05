@@ -6,8 +6,8 @@
 
 .clickable-card:hover {
     transform: translateY(-4px);
-    border-color: #3b82f6 !important;
-    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.15);
+    border-color: rgba(var(--color-accent-rgb), 0.5) !important;
+    box-shadow: 0 8px 20px rgba(var(--color-accent-rgb), 0.15);
 }
 
 /* Featured Players Carousel Styles */
@@ -15,8 +15,8 @@
     position: relative;
     padding: 1.5rem;
     border-radius: 16px;
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-header-gradient);
+    border: 1px solid var(--color-border);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     overflow: hidden;
 }
@@ -54,9 +54,9 @@
 }
 
 .carousel-nav-btn {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    color: #f8fafc;
+    background: var(--color-btn-secondary-bg);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
     width: 36px;
     height: 36px;
     border-radius: 50%;
@@ -69,8 +69,8 @@
 }
 
 .carousel-nav-btn:hover {
-    background: #3b82f6;
-    border-color: #3b82f6;
+    background: var(--color-accent);
+    border-color: var(--color-accent);
     color: white;
     transform: scale(1.08);
 }
@@ -87,7 +87,7 @@
     scroll-snap-type: x mandatory;
     padding: 0.5rem 0.25rem 1rem 0.25rem;
     scrollbar-width: thin;
-    scrollbar-color: rgba(59, 130, 246, 0.5) rgba(15, 23, 42, 0.3);
+    scrollbar-color: rgba(var(--color-accent-rgb), 0.5) rgba(0, 0, 0, 0.3);
 }
 
 .featured-carousel-track::-webkit-scrollbar {
@@ -95,12 +95,12 @@
 }
 
 .featured-carousel-track::-webkit-scrollbar-track {
-    background: rgba(15, 23, 42, 0.3);
+    background: rgba(0, 0, 0, 0.3);
     border-radius: 4px;
 }
 
 .featured-carousel-track::-webkit-scrollbar-thumb {
-    background: rgba(59, 130, 246, 0.5);
+    background: rgba(var(--color-accent-rgb), 0.5);
     border-radius: 4px;
 }
 
@@ -111,8 +111,8 @@
     flex-shrink: 0;
     position: relative;
     border-radius: 14px;
-    background: rgba(30, 41, 59, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     padding: 1.25rem 1rem;
     text-align: center;
     text-decoration: none;
@@ -131,16 +131,16 @@
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    background: linear-gradient(90deg, var(--color-accent), var(--color-accent-hover));
     opacity: 0.7;
     transition: opacity 0.3s ease;
 }
 
 .featured-card:hover {
     transform: translateY(-6px) scale(1.02);
-    border-color: rgba(59, 130, 246, 0.5);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4), 0 0 20px rgba(59, 130, 246, 0.2);
-    background: rgba(30, 41, 59, 0.85);
+    border-color: rgba(var(--color-accent-rgb), 0.5);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4), 0 0 20px rgba(var(--color-accent-rgb), 0.2);
+    background: var(--color-bg-solid);
 }
 
 .featured-card:hover::before {
@@ -156,13 +156,13 @@
     position: absolute;
     bottom: -4px;
     right: -4px;
-    background: #3b82f6;
+    background: var(--color-accent);
     color: #ffffff;
     font-size: 0.75rem;
     font-weight: 800;
     padding: 0.15rem 0.45rem;
     border-radius: 10px;
-    border: 2px solid #1e293b;
+    border: 2px solid var(--color-bg-solid);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
@@ -170,7 +170,7 @@
     margin: 0.25rem 0;
     font-size: 1rem;
     font-weight: 700;
-    color: #f8fafc;
+    color: var(--color-text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -180,7 +180,7 @@
 .featured-player-team {
     margin: 0 0 0.75rem 0;
     font-size: 0.82rem;
-    color: #94a3b8;
+    color: var(--color-text-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -192,9 +192,9 @@
     justify-content: space-around;
     width: 100%;
     padding-top: 0.6rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid var(--color-border);
     font-size: 0.78rem;
-    color: #cbd5e1;
+    color: var(--color-text-secondary);
 }
 
 .featured-stat-item {
@@ -205,7 +205,7 @@
 
 .featured-stat-value {
     font-weight: 700;
-    color: #60a5fa;
+    color: var(--color-accent);
 }
 
 /* Player Detail View Styles */
@@ -215,8 +215,8 @@
     gap: 1.5rem;
     padding: 1.75rem;
     border-radius: 16px;
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.95));
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-header-gradient);
+    border: 1px solid var(--color-border);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
     margin-bottom: 1.5rem;
     flex-wrap: wrap;
@@ -234,7 +234,7 @@
     height: 100px;
     border-radius: 50%;
     object-fit: cover;
-    border: 3px solid #3b82f6;
+    border: 3px solid var(--color-accent);
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
 }
 
@@ -242,14 +242,14 @@
     width: 100px;
     height: 100px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    background: linear-gradient(135deg, var(--color-accent), var(--color-accent-hover));
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.5rem;
     font-weight: 800;
-    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 6px 16px rgba(var(--color-accent-rgb), 0.3);
 }
 
 .profile-info {
@@ -260,17 +260,17 @@
     margin: 0 0 0.4rem 0;
     font-size: 1.6rem;
     font-weight: 800;
-    color: #f8fafc;
+    color: var(--color-text-primary);
 }
 
 .profile-team {
     margin-top: 0.5rem;
     font-size: 0.9rem;
-    color: #94a3b8;
+    color: var(--color-text-muted);
 }
 
 .profile-team a {
-    color: #60a5fa;
+    color: var(--color-accent);
     text-decoration: none;
     font-weight: 700;
 }
@@ -285,8 +285,8 @@
     flex-direction: column;
     gap: 0.35rem;
     padding: 1.5rem;
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.95));
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-header-gradient);
+    border: 1px solid var(--color-border);
     border-radius: 16px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
     margin-bottom: 1.5rem;
@@ -296,13 +296,13 @@
     margin: 0;
     font-size: 1.75rem;
     font-weight: 800;
-    color: #f8fafc;
+    color: var(--color-text-primary);
 }
 
 .view-header p {
     margin: 0;
     font-size: 0.9rem;
-    color: #94a3b8;
+    color: var(--color-text-secondary);
 }
 
 /* Stats Grid in Player Detail */
@@ -316,8 +316,8 @@
 .stat-card {
     padding: 1.25rem;
     border-radius: 12px;
-    background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.85));
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-surface-gradient);
+    border: 1px solid var(--color-border);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     text-align: center;
     transition: transform 0.2s ease;
@@ -325,12 +325,12 @@
 
 .stat-card:hover {
     transform: translateY(-2px);
-    border-color: rgba(59, 130, 246, 0.3);
+    border-color: rgba(var(--color-accent-rgb), 0.3);
 }
 
 .stat-card h3 {
     font-size: 0.8rem;
-    color: #94a3b8;
+    color: var(--color-text-muted);
     margin: 0 0 0.5rem 0;
     font-weight: 600;
     text-transform: uppercase;
@@ -340,7 +340,7 @@
 .stat-number {
     font-size: 1.8rem;
     font-weight: 800;
-    color: #60a5fa;
+    color: var(--color-accent);
     margin: 0;
 }
 
@@ -353,16 +353,16 @@
 .data-table th {
     text-align: left;
     padding: 0.65rem 0.85rem;
-    color: #94a3b8;
+    color: var(--color-text-muted);
     font-size: 0.8rem;
     text-transform: uppercase;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .data-table td {
     padding: 0.75rem 0.85rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-    color: #e2e8f0;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-primary);
     font-size: 0.9rem;
 }
 

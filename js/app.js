@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const appContainer = document.getElementById('app');
                 router.init(appContainer);
             })(),
-            wait(2000) // FORZAR 2 SEGUNDOS MÍNIMOS
+            wait(1000) // FORZAR 1 SEGUNDO MÍNIMO
         ]);
 
     } catch (error) {
