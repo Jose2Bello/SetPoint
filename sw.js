@@ -6,6 +6,7 @@ const APP_SHELL = [
     './manifest.webmanifest',
     './css/main.css',
     './css/variables.css',
+    './css/responsive.css',
     './css/reset.css',
     './css/layout.css',
     './css/utilities.css',
