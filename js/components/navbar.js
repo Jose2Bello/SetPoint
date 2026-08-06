@@ -2,6 +2,7 @@
 import { storage } from '../utils/storage.js';
 import { leaguesDb } from '../db/leagues.db.js';
 import { SPORTS } from '../sports-terms.js';
+import { initDB } from '../db/connection.js'; 
 
 class LeagueNavbar extends HTMLElement {
     constructor() {
@@ -9,9 +10,17 @@ class LeagueNavbar extends HTMLElement {
         this.activeRoute = 'dashboard';
     }
 
-    async connectedCallback() {
-        this.render();
-        window.addEventListener('league-activated', () => this.render());
+    connectedCallback() {
+        this.render().catch(err => console.error('Error renderizando navbar:', err));
+    
+        this._boundHandleLeagueActivation = () => {
+            this.render().catch(err => console.error('Error al actualizar navbar por liga activada:', err));
+        };
+        window.addEventListener('league-activated', this._boundHandleLeagueActivation);
+    }
+
+    disconnectedCallback() {
+        window.removeEventListener('league-activated', this._boundHandleLeagueActivation);
     }
 
     setActiveLink(routeName) {
@@ -28,6 +37,12 @@ class LeagueNavbar extends HTMLElement {
     }
 
     async render() {
+        try {
+            await initDB();
+        } catch (e) {
+            console.warn('La base de datos aún no está disponible para Navbar');
+        }
+
         const activeLeagueId = storage.getActiveLeagueId();
         let leagueInfo = 'Ninguna Liga Activa';
         let sportConfig = null;
@@ -41,35 +56,38 @@ class LeagueNavbar extends HTMLElement {
                     leagueInfo = `${sportIcon} ${league.name} (${league.season})`;
                 }
             } catch (e) {
-                console.error(e);
+                console.error('Error al obtener datos de la liga activa en Navbar:', e);
             }
         }
 
-        this.innerHTML = `
-    <header class="header-container">
-        <!-- 1. Marca (Izquierda) -->
-        <div class="nav-brand">
-            <a href="#dashboard" class="flex align-center gap-sm">
-                <span class="brand-logo"></span>
-                <span class="brand-title font-bold">SetPoint</span>
-            </a>
-        </div>
+        const brandLogo = (sportConfig && sportConfig.logo) ? sportConfig.logo : 'assets/Sin título.png';
         
-        <!-- 2. Navegación (Centro) -->
-        <nav class="nav-links flex gap-md">
-            <a href="#dashboard" class="${this.activeRoute === 'dashboard' ? 'active' : ''}">Inicio</a>
-            <a href="#leagues" class="${this.activeRoute === 'leagues' ? 'active' : ''}">Ligas</a>
-            <a href="#teams" class="${this.activeRoute === 'teams' ? 'active' : ''}">Equipos</a>
-            <a href="#players" class="${this.activeRoute === 'players' ? 'active' : ''}">Jugadores</a>
-            <a href="#matches" class="${this.activeRoute === 'matches' ? 'active' : ''}">Partidos</a>
-            <a href="#stats" class="${this.activeRoute === 'stats' ? 'active' : ''}">Estadísticas</a>
-        </nav>
+        this.innerHTML = `
+<header class="header-container">
+    <!-- 1. Marca con Logo en Imagen (Izquierda) -> Dirige al Landing -->
+    <div class="nav-brand">
+        <a href="#landing" class="brand-link flex align-center gap-sm" title="Ir al Inicio / Landing">
+            <div class="logo-grid-container">
+                <img src="${brandLogo}" alt="${sportConfig ? sportConfig.name : 'SetPoint'} Logo" class="brand-logo-img" />
+            </div>
+        </a>
+    </div>
+    
+    <!-- 2. Navegación (Centro) -->
+    <nav class="nav-links flex gap-md">
+        <a href="#dashboard" class="${this.activeRoute === 'dashboard' ? 'active' : ''}">Dashboard</a>
+        <a href="#leagues" class="${this.activeRoute === 'leagues' ? 'active' : ''}">Ligas</a>
+        <a href="#teams" class="${this.activeRoute === 'teams' ? 'active' : ''}">Equipos</a>
+        <a href="#players" class="${this.activeRoute === 'players' ? 'active' : ''}">Jugadores</a>
+        <a href="#matches" class="${this.activeRoute === 'matches' ? 'active' : ''}">Partidos</a>
+        <a href="#stats" class="${this.activeRoute === 'stats' ? 'active' : ''}">Estadísticas</a>
+    </nav>
 
-      
-                <div class="nav-league-info text-secondary font-medium">
-                ${leagueInfo}
-        </div>
-    </header>
+    <!-- 3. Información de Liga Activa (Derecha) -->
+    <div class="nav-league-info text-secondary font-medium">
+        ${leagueInfo}
+    </div>
+</header>
 `;
     }
 }
