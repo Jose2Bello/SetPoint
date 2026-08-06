@@ -11,7 +11,6 @@ class LeagueNavbar extends HTMLElement {
     }
 
     connectedCallback() {
-        
         this.render().catch(err => console.error('Error renderizando navbar:', err));
     
         this._boundHandleLeagueActivation = () => {
@@ -62,11 +61,12 @@ class LeagueNavbar extends HTMLElement {
         }
 
         const brandLogo = (sportConfig && sportConfig.logo) ? sportConfig.logo : 'assets/Sin título.png';
-this.innerHTML = `
+        
+        this.innerHTML = `
 <header class="header-container">
-    <!-- 1. Marca con Logo en Imagen (Izquierda) -->
+    <!-- 1. Marca con Logo en Imagen (Izquierda) -> Dirige al Landing -->
     <div class="nav-brand">
-        <a href="#dashboard" class="brand-link flex align-center gap-sm">
+        <a href="#landing" class="brand-link flex align-center gap-sm" title="Ir al Inicio / Landing">
             <div class="logo-grid-container">
                 <img src="${brandLogo}" alt="${sportConfig ? sportConfig.name : 'SetPoint'} Logo" class="brand-logo-img" />
             </div>
@@ -75,7 +75,7 @@ this.innerHTML = `
     
     <!-- 2. Navegación (Centro) -->
     <nav class="nav-links flex gap-md">
-        <a href="#dashboard" class="${this.activeRoute === 'dashboard' ? 'active' : ''}">Inicio</a>
+        <a href="#dashboard" class="${this.activeRoute === 'dashboard' ? 'active' : ''}">Dashboard</a>
         <a href="#leagues" class="${this.activeRoute === 'leagues' ? 'active' : ''}">Ligas</a>
         <a href="#teams" class="${this.activeRoute === 'teams' ? 'active' : ''}">Equipos</a>
         <a href="#players" class="${this.activeRoute === 'players' ? 'active' : ''}">Jugadores</a>
