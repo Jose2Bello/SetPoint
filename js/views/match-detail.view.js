@@ -1,4 +1,4 @@
-import { getMatchById } from '../db/matches.db.js';
+import { getMatchById, updateMatch } from '../db/matches.db.js';
 import { getTeamById } from '../db/teams.db.js';
 import { getPlayersByTeam } from '../db/players.db.js';
 import { getEventsByMatch, createMatchEvent, deleteMatchEvent } from '../db/events.db.js';
@@ -47,9 +47,16 @@ export async function renderMatchDetail(container, params) {
     const backNav = document.createElement('div');
     backNav.className = 'back-nav';
     const backLink = document.createElement('a');
-    backLink.href = '#matches';
-    backLink.className = 'btn btn-secondary';
-    backLink.textContent = '← Volver al Calendario';
+    const isBracketLeague = activeLeague && (activeLeague.mode === 'eliminacion' || activeLeague.mode === 'doble-eliminacion');
+    if (isBracketLeague) {
+        backLink.href = `#league/${match.leagueId ?? activeLeague.id}`;
+        backLink.className = 'btn btn-secondary';
+        backLink.textContent = '← Volver al Bracket';
+    } else {
+        backLink.href = '#matches';
+        backLink.className = 'btn btn-secondary';
+        backLink.textContent = '← Volver al Calendario';
+    }
     backNav.appendChild(backLink);
     container.appendChild(backNav);
 
@@ -114,6 +121,79 @@ export async function renderMatchDetail(container, params) {
     statusBadge.className = `badge status-${statusKey}`;
     statusBadge.textContent = isFinished ? 'Finalizado' : (events.length > 0 ? 'En Juego' : 'Programado');
     scoreDiv.appendChild(statusBadge);
+
+    const btnChangeStatus = document.createElement('button');
+    btnChangeStatus.className = 'btn btn-sm btn-secondary';
+    btnChangeStatus.textContent = 'Cambiar Estado';
+    btnChangeStatus.addEventListener('click', async () => {
+        const pick = await confirmAction(
+            'Cambiar Estado del Partido',
+            'Selecciona el nuevo estado del partido.',
+            {
+                confirmText: 'Guardar Estado',
+                choices: [
+                    { value: 'Programado', label: 'Programado' },
+                    { value: 'En Juego', label: 'En Juego' },
+                    { value: 'Finalizado', label: 'Finalizado' }
+                ]
+            }
+        );
+        if (!pick || !pick.confirmed) return;
+
+        const newStatus = pick.value;
+
+        if (newStatus === 'Finalizado') {
+            const currentEvents = await getEventsByMatch(matchId);
+            const calcHomeScore = currentEvents.filter(ev => ev.teamId === homeTeam?.id && !isInfraction(ev.type)).length;
+            const calcAwayScore = currentEvents.filter(ev => ev.teamId === awayTeam?.id && !isInfraction(ev.type)).length;
+
+            let winnerId = null;
+            const isKnockout = activeLeague.mode === 'eliminacion' || activeLeague.mode === 'doble-eliminacion' || activeLeague.modality === 'knockout';
+
+            if (isKnockout && calcHomeScore === calcAwayScore) {
+                const pickWinner = await confirmAction(
+                    'Declarar Ganador',
+                    `El partido terminó en empate (${calcHomeScore}-${calcAwayScore}). Al ser eliminación directa, debes declarar al equipo clasificado.`,
+                    {
+                        confirmText: 'Declarar Ganador',
+                        choices: [
+                            { value: homeTeam.id, label: homeTeam.name },
+                            { value: awayTeam.id, label: awayTeam.name }
+                        ]
+                    }
+                );
+                if (pickWinner && pickWinner.confirmed) {
+                    winnerId = Number(pickWinner.value);
+                } else {
+                    toast.error('Ganador no declarado. Operación cancelada.');
+                    return;
+                }
+            }
+
+            try {
+                await finalizeMatch(matchId, currentEvents, winnerId);
+                toast.success('¡Partido finalizado con éxito!');
+                await renderMatchDetail(container, params);
+            } catch (err) {
+                toast.error('Error en transacción de finalización: ' + err.message);
+            }
+            return;
+        }
+
+        if (isFinished) {
+            toast.warning('Para revertir un partido finalizado usa "Deshacer Partido Finalizado".');
+            return;
+        }
+
+        try {
+            await updateMatch(matchId, { status: newStatus });
+            toast.success(`Estado cambiado a "${newStatus}".`);
+            await renderMatchDetail(container, params);
+        } catch (err) {
+            toast.error('Error al cambiar el estado: ' + err.message);
+        }
+    });
+    scoreDiv.appendChild(btnChangeStatus);
 
     const metaParts = [];
     if (match.round) metaParts.push(`Ronda: ${match.round}`);

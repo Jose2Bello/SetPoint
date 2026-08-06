@@ -1,5 +1,5 @@
 /* Service Worker: SetPoint PWA */
-const CACHE_NAME = 'setpoint-v1';
+const CACHE_NAME = 'setpoint-v3';
 const APP_SHELL = [
     './',
     './index.html',
@@ -49,6 +49,7 @@ const APP_SHELL = [
     './js/utils/dom.js',
     './js/utils/storage.js',
     './js/utils/validators.js',
+    './js/utils/input-limit.js',
     './js/views/dashboard.view.js',
     './js/views/leagues.view.js',
     './js/views/teams.view.js',
@@ -68,7 +69,11 @@ const APP_SHELL = [
     './assets/partidos_totales%20volley%20icon.png',
     './assets/partidos_finalizados_icon.png',
     './assets/partidos_finalizados%20basket%20icon.png',
-    './assets/partidos_finalizados%20voley%20icon.png'
+    './assets/partidos_finalizados%20voley%20icon.png',
+    './assets/Football Field horizontal.jpg',
+    './assets/Football Field.jpg',
+    './assets/volleyball-field.png',
+    './assets/Wooden-Basketball-Court-Wallpaper-Mural.jpg'
 ];
 
 self.addEventListener('install', (event) => {

@@ -87,14 +87,17 @@ export function updateTeam(id, teamUpdate) {
                 return;
             }
             
-            data.name = teamUpdate.name.trim();
+            data.name = teamUpdate.name ? teamUpdate.name.trim() : data.name;
             // Soporta 'logo' o 'shield' al actualizar
             data.logo = teamUpdate.logo !== undefined 
                 ? teamUpdate.logo 
                 : (teamUpdate.shield !== undefined ? teamUpdate.shield : data.logo || '');
-            data.primaryColor = teamUpdate.primaryColor;
-            data.secondaryColor = teamUpdate.secondaryColor;
-            data.city = (teamUpdate.city || '').trim();
+            if (teamUpdate.primaryColor) data.primaryColor = teamUpdate.primaryColor;
+            if (teamUpdate.secondaryColor) data.secondaryColor = teamUpdate.secondaryColor;
+            if (teamUpdate.city !== undefined) data.city = (teamUpdate.city || '').trim();
+            if (teamUpdate.formation !== undefined) data.formation = teamUpdate.formation;
+            if (teamUpdate.discipline !== undefined) data.discipline = teamUpdate.discipline;
+            if (teamUpdate.sport !== undefined) data.sport = teamUpdate.sport;
             
             const putReq = store.put(data);
             putReq.onsuccess = () => resolve();

@@ -101,9 +101,8 @@ function renderListView(container, teams, activeLeagueId, initialSportFilter) {
 
             ${filteredTeams.length === 0 ? `
                 <div class="glass-card text-center" style="padding: 3rem 1.5rem;">
-                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">${SPORTS[currentSportFilter]?.icon || '🛡️'}</div>
-                    <h2 class="text-xl font-bold mb-2">No hay equipos de ${SPORTS[currentSportFilter]?.name || 'este deporte'}</h2>
-                    <p class="text-secondary mb-4">Comienza registrando los equipos participantes en esta disciplina.</p>
+                    <h2 class="font-bold" style="margin: 0 0 0.75rem 0; font-size: 1.5rem; color: var(--color-text-primary);">No hay equipos de ${SPORTS[currentSportFilter]?.name || 'este deporte'}</h2>
+                    <p class="text-secondary" style="margin: 0 auto 1.5rem auto; max-width: 420px; line-height: 1.6;">Comienza registrando los equipos participantes en esta disciplina.</p>
                     <button id="btnNewTeamEmpty" class="btn btn-primary">Registrar Primer Equipo</button>
                 </div>
             ` : `
@@ -233,7 +232,7 @@ function renderFormView(container, leagueId, teamToEdit = null, defaultSport = '
 
                     <div class="form-group">
                         <label class="label text-sm">Nombre del Equipo</label>
-                        <input type="text" name="name" class="input" value="${teamToEdit?.name || ''}" required placeholder="Ej. Real Madrid" style="width: 100%; box-sizing: border-box;">
+                        <input type="text" name="name" class="input" value="${teamToEdit?.name || ''}" required placeholder="Ej. Real Madrid" maxlength="60" style="width: 100%; box-sizing: border-box;">
                     </div>
 
                     <div class="form-group">
@@ -252,7 +251,7 @@ function renderFormView(container, leagueId, teamToEdit = null, defaultSport = '
 
                     <div class="form-group">
                         <label class="label text-sm">Ciudad / Sede (Opcional)</label>
-                        <input type="text" name="city" class="input" value="${teamToEdit?.city || ''}" placeholder="Ej. Madrid" style="width: 100%; box-sizing: border-box;">
+                        <input type="text" name="city" class="input" value="${teamToEdit?.city || ''}" placeholder="Ej. Madrid" maxlength="60" style="width: 100%; box-sizing: border-box;">
                     </div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">

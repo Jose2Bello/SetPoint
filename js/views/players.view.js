@@ -264,22 +264,25 @@ function renderPlayerCards(container, players, teamMap, sportConfig) {
     `).join('');
 }
 
-function setupPlayerModal(container, teams, activeLeagueId, sportConfig, onSuccess) {
-    let modalOverlay = document.getElementById('player-modal-overlay');
-    if (!modalOverlay) {
-        modalOverlay = document.createElement('div');
-        modalOverlay.id = 'player-modal-overlay';
-        modalOverlay.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--color-bg-overlay); backdrop-filter: blur(6px);
-            display: none; justify-content: center; align-items: center; z-index: 1000;
-            padding: 1rem; box-sizing: border-box;
-        `;
-        document.body.appendChild(modalOverlay);
-    }
+export function openPlayerModal(teams, activeLeagueId, sportConfig, options = {}) {
+    const { teamId = null, onSuccess = null } = options;
+
+    const existing = document.getElementById('player-modal-overlay');
+    if (existing) existing.remove();
+
+    const modalOverlay = document.createElement('div');
+    modalOverlay.id = 'player-modal-overlay';
+    modalOverlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: var(--color-bg-overlay); backdrop-filter: blur(6px);
+        display: flex; justify-content: center; align-items: center; z-index: 1000;
+        padding: 1rem; box-sizing: border-box;
+    `;
+    document.body.appendChild(modalOverlay);
 
     const positions = sportConfig.defaultPositions || ['Jugador'];
     const sportIcon = sportConfig.icon || '👤';
+    const preselected = teamId !== null && teamId !== undefined ? Number(teamId) : null;
 
     modalOverlay.innerHTML = `
         <div class="glass-panel" style="width: 100%; max-width: 600px; padding: 2.25rem; border-radius: 16px; background: var(--color-bg-modal); box-shadow: 0 24px 60px rgba(0,0,0,0.6); border: 1px solid rgba(var(--color-accent-rgb), 0.25); max-height: 92vh; overflow-y: auto; box-sizing: border-box;">
@@ -303,7 +306,7 @@ function setupPlayerModal(container, teams, activeLeagueId, sportConfig, onSucce
 
                 <div style="margin-bottom: 1.25rem;">
                     <label style="display: block; font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.35rem;">Nombre Completo *</label>
-                    <input type="text" id="player-name" class="form-control" required placeholder="Ej. Lionel Messi" style="width: 100%; box-sizing: border-box; padding: 0.75rem; font-size: 1rem;" />
+                    <input type="text" id="player-name" class="form-control" required placeholder="Ej. Lionel Messi" maxlength="60" style="width: 100%; box-sizing: border-box; padding: 0.75rem; font-size: 1rem;" />
                 </div>
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
@@ -322,8 +325,8 @@ function setupPlayerModal(container, teams, activeLeagueId, sportConfig, onSucce
                 <div style="margin-bottom: 1.75rem;">
                     <label style="display: block; font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.35rem;">Equipo *</label>
                     <select id="player-team" class="form-control" required style="width: 100%; box-sizing: border-box; padding: 0.75rem;">
-                        <option value="" disabled selected>Selecciona un equipo...</option>
-                        ${teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+                        <option value="" disabled ${preselected ? '' : 'selected'}>Selecciona un equipo...</option>
+                        ${teams.map(t => `<option value="${t.id}" ${Number(t.id) === preselected ? 'selected' : ''}>${t.name}</option>`).join('')}
                     </select>
                 </div>
 
@@ -353,18 +356,8 @@ function setupPlayerModal(container, teams, activeLeagueId, sportConfig, onSucce
         }
     });
 
-    const btnOpen = container.querySelector('#btn-new-player');
     const btnCancel = document.getElementById('btn-cancel-player');
     const form = document.getElementById('form-new-player');
-
-    btnOpen.addEventListener('click', () => {
-        form.reset();
-        base64Image = null;
-        photoPreview.src = DEFAULT_AVATAR;
-        photoPreview.style.borderStyle = 'dashed';
-        photoPreview.style.borderColor = '#64748b';
-        modalOverlay.style.display = 'flex';
-    });
 
     const closeModal = () => {
         modalOverlay.style.display = 'none';
@@ -396,5 +389,15 @@ function setupPlayerModal(container, teams, activeLeagueId, sportConfig, onSucce
             console.error("Error al guardar jugador:", error);
             toast.error("Ocurrió un error al guardar el jugador.");
         }
+    });
+
+    modalOverlay.style.display = 'flex';
+}
+
+export function setupPlayerModal(container, teams, activeLeagueId, sportConfig, onSuccess) {
+    const btnOpen = container.querySelector('#btn-new-player');
+    if (!btnOpen) return;
+    btnOpen.addEventListener('click', () => {
+        openPlayerModal(teams, activeLeagueId, sportConfig, { onSuccess });
     });
 }

@@ -1,5 +1,5 @@
 import { renderDashboard } from './views/dashboard.view.js';
-import { renderLeagues } from './views/leagues.view.js';
+import { renderLeagues, renderLeagueDetail } from './views/leagues.view.js';
 import { renderTeams } from './views/teams.view.js';
 import { renderTeamDetail } from './views/team-detail.view.js';
 import { renderMatches } from './views/matches.view.js';
@@ -11,6 +11,7 @@ import { renderStats } from './views/stats-view.js';
 const routes = {
     'dashboard': renderDashboard, 
     'leagues': renderLeagues,
+    'league': renderLeagueDetail,
     'teams': renderTeams, 
     'team': renderTeamDetail,
     'matches': renderMatches,

@@ -36,9 +36,14 @@ export async function renderPlayerDetail(container, params) {
     const backNav = document.createElement('div');
     backNav.className = 'back-nav';
     const backLink = document.createElement('a');
-    backLink.href = '#players';
     backLink.className = 'btn btn-secondary';
-    backLink.textContent = '← Volver a Jugadores';
+    if (team) {
+        backLink.href = `#team/${player.teamId}`;
+        backLink.textContent = '← Volver al Equipo';
+    } else {
+        backLink.href = '#players';
+        backLink.textContent = '← Volver a Jugadores';
+    }
     backNav.appendChild(backLink);
     container.appendChild(backNav);
 

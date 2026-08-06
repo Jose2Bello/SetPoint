@@ -19,6 +19,15 @@ export async function renderLeagues(container) {
     renderListView(container, leagues, activeLeagueId);
 }
 
+export async function renderLeagueDetail(container, params) {
+    const leagueId = Number(params.id);
+    if (leagueId) {
+        await renderLeagueDetailView(container, leagueId, 'bracket');
+    } else {
+        await renderLeagues(container);
+    }
+}
+
 function renderListView(container, leagues, activeLeagueId) {
     container.innerHTML = `
         <div class="leagues-header">
@@ -384,7 +393,7 @@ function showAddMatchModal(leagueId, teams, onSuccess) {
                 </div>
                 <div style="margin-bottom:1.25rem;">
                     <label style="display:block; font-size:0.82rem; color:var(--color-text-muted); margin-bottom:0.25rem;">Jornada / Ronda (Opcional)</label>
-                    <input type="text" id="addMatchRound" class="form-control" placeholder="Ej. 1" style="width:100%; box-sizing:border-box;" />
+                    <input type="text" id="addMatchRound" class="form-control" placeholder="Ej. 1" maxlength="20" style="width:100%; box-sizing:border-box;" />
                 </div>
                 <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
                     <button type="button" id="btnCancelAddMatch" class="btn btn-secondary">Cancelar</button>
@@ -462,11 +471,11 @@ async function showEnrollTeamModal(leagueId, leagueSport, enrolledIds, onSuccess
                 <form id="formEnrollTeam">
                     <div style="margin-bottom:1rem;">
                         <label style="display:block; font-size:0.82rem; color:var(--color-text-muted); margin-bottom:0.25rem;">Nombre del Equipo *</label>
-                        <input type="text" id="enrollTeamName" class="form-control" required placeholder="Ej. Real Madrid FC" style="width:100%; box-sizing:border-box;" />
+                        <input type="text" id="enrollTeamName" class="form-control" required placeholder="Ej. Real Madrid FC" maxlength="60" style="width:100%; box-sizing:border-box;" />
                     </div>
                     <div style="margin-bottom:1.25rem;">
                         <label style="display:block; font-size:0.82rem; color:var(--color-text-muted); margin-bottom:0.25rem;">Ciudad / Sede</label>
-                        <input type="text" id="enrollTeamCity" class="form-control" placeholder="Ej. Madrid" style="width:100%; box-sizing:border-box;" />
+                        <input type="text" id="enrollTeamCity" class="form-control" placeholder="Ej. Madrid" maxlength="60" style="width:100%; box-sizing:border-box;" />
                     </div>
                     <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
                         <button type="button" id="btnCancelNewTeam" class="btn btn-secondary">Cancelar</button>
@@ -523,7 +532,7 @@ async function showEnrollTeamModal(leagueId, leagueSport, enrolledIds, onSuccess
  * Pestaña del Bracket de Eliminación
  */
 function renderBracketTab(container, league, teams, matches, refreshTab) {
-    const teamMap = new Map(teams.map(t => [Number(t.id), t.name]));
+    const teamMap = new Map(teams.map(t => [Number(t.id), t]));
 
     if (matches.length === 0) {
         const requiredCount = Number(league.bracketTeamsCount) || 8;
@@ -687,14 +696,14 @@ function renderBracketMatchCard(match, teamMap, matches) {
     let awayName = 'Por definir';
 
     if (match.homeTeamId) {
-        homeName = teamMap.get(Number(match.homeTeamId)) || 'Equipo';
+        homeName = teamMap.get(Number(match.homeTeamId))?.name || 'Equipo';
     } else {
         const sourceMatch = matches.find(m => Number(m.nextMatchId) === Number(match.id) && m.nextMatchHomeSlot === true);
         if (sourceMatch) homeName = `Ganador P.${sourceMatch.id}`;
     }
 
     if (match.awayTeamId) {
-        awayName = teamMap.get(Number(match.awayTeamId)) || 'Equipo';
+        awayName = teamMap.get(Number(match.awayTeamId))?.name || 'Equipo';
     } else {
         const sourceMatch = matches.find(m => Number(m.nextMatchId) === Number(match.id) && m.nextMatchHomeSlot === false);
         if (sourceMatch) awayName = `Ganador P.${sourceMatch.id}`;
@@ -707,8 +716,10 @@ function renderBracketMatchCard(match, teamMap, matches) {
     const hScore = match.score?.home ?? match.homeScore ?? 0;
     const aScore = match.score?.away ?? match.awayScore ?? 0;
 
-    const homeAvatar = match.homeTeamId ? homeName.substring(0, 2).toUpperCase() : '?';
-    const awayAvatar = match.awayTeamId ? awayName.substring(0, 2).toUpperCase() : '?';
+    const homeTeamObj = match.homeTeamId ? teamMap.get(Number(match.homeTeamId)) : null;
+    const awayTeamObj = match.awayTeamId ? teamMap.get(Number(match.awayTeamId)) : null;
+    const homeAvatar = homeTeamObj?.logo || (match.homeTeamId ? homeName.substring(0, 2).toUpperCase() : '?');
+    const awayAvatar = awayTeamObj?.logo || (match.awayTeamId ? awayName.substring(0, 2).toUpperCase() : '?');
 
     return `
         <div class="bracket-match-card" data-match-id="${match.id}">
@@ -719,7 +730,10 @@ function renderBracketMatchCard(match, teamMap, matches) {
 
             <div class="bracket-team-row ${homeWinner ? 'winner' : ''} ${!match.homeTeamId ? 'placeholder-team' : ''}">
                 <div class="team-info">
-                    <div class="team-avatar">${homeAvatar}</div>
+                    ${homeTeamObj?.logo
+                        ? `<img class="team-avatar-img" src="${homeTeamObj.logo}" alt="${homeName}" />`
+                        : `<div class="team-avatar">${homeAvatar}</div>`
+                    }
                     <span class="team-name" title="${homeName}">${homeName}</span>
                 </div>
                 <span class="bracket-score-pill">${isFinalized ? hScore : '-'}</span>
@@ -727,7 +741,10 @@ function renderBracketMatchCard(match, teamMap, matches) {
 
             <div class="bracket-team-row ${awayWinner ? 'winner' : ''} ${!match.awayTeamId ? 'placeholder-team' : ''}" style="margin-top: 0.35rem;">
                 <div class="team-info">
-                    <div class="team-avatar">${awayAvatar}</div>
+                    ${awayTeamObj?.logo
+                        ? `<img class="team-avatar-img" src="${awayTeamObj.logo}" alt="${awayName}" />`
+                        : `<div class="team-avatar">${awayAvatar}</div>`
+                    }
                     <span class="team-name" title="${awayName}">${awayName}</span>
                 </div>
                 <span class="bracket-score-pill">${isFinalized ? aScore : '-'}</span>
@@ -851,12 +868,12 @@ function renderFormView(container, leagueToEdit = null) {
                 <div class="form-grid-2col">
                     <div class="form-group">
                         <label class="label text-sm">Nombre de la Liga</label>
-                        <input type="text" name="name" class="input" value="${leagueToEdit?.name || ''}" required placeholder="Ej. Liga Premier 2026">
+                        <input type="text" name="name" class="input" value="${leagueToEdit?.name || ''}" required placeholder="Ej. Liga Premier 2026" maxlength="60">
                     </div>
 
                     <div class="form-group">
                         <label class="label text-sm">Temporada</label>
-                        <input type="text" name="season" class="input" value="${leagueToEdit?.season || ''}" required placeholder="Ej. Clausura 2026">
+                        <input type="text" name="season" class="input" value="${leagueToEdit?.season || ''}" required placeholder="Ej. Clausura 2026" maxlength="40">
                     </div>
 
                     ${!isEdit ? `
@@ -889,7 +906,7 @@ function renderFormView(container, leagueToEdit = null) {
 
                     <div class="form-group col-span-2">
                         <label class="label text-sm">Descripción (Opcional)</label>
-                        <textarea name="description" class="input" rows="2" placeholder="Notas sobre el torneo...">${leagueToEdit?.description || ''}</textarea>
+                        <textarea name="description" class="input" rows="2" maxlength="300" placeholder="Notas sobre el torneo...">${leagueToEdit?.description || ''}</textarea>
                     </div>
                 </div>
 
