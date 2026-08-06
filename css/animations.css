@@ -19,6 +19,17 @@
     }
 }
 
+@keyframes viewEnter {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 @keyframes pulseGlow {
     0%, 100% {
         box-shadow: 0 0 5px rgba(var(--color-accent-rgb), 0.2);
@@ -36,4 +47,14 @@
 
 .animate-spin {
     animation: spin 1s linear infinite;
+}
+
+/* Transición de entrada al renderizar cada vista */
+#app > * {
+    animation: viewEnter 0.4s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+}
+
+/* Transición de entrada al cargar la página */
+#app-wrapper {
+    animation: viewEnter 0.5s cubic-bezier(0.4, 0, 0.2, 1) backwards;
 }

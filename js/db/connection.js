@@ -1,5 +1,4 @@
-
-
+/* js/db/connection.js */
 const DB_NAME = 'leaguehub-db';
 const DB_VERSION = 1;
 
@@ -8,7 +7,7 @@ let dbPromise = null;
 
 /**
  * Initializes the IndexedDB database, sets up stores and indexes.
-  @returns {Promise<IDBDatabase>}
+ * @returns {Promise<IDBDatabase>}
  */
 export function initDB() {
     if (dbPromise) return dbPromise;
@@ -32,7 +31,6 @@ export function initDB() {
                 const teamStore = db.createObjectStore('teams', { keyPath: 'id', autoIncrement: true });
                 teamStore.createIndex('leagueId', 'leagueId', { unique: false });
                 teamStore.createIndex('name', 'name', { unique: false });
-                // Compound index to ensure name uniqueness per league
                 teamStore.createIndex('league_name', ['leagueId', 'name'], { unique: true });
             }
             
@@ -41,7 +39,6 @@ export function initDB() {
                 const playerStore = db.createObjectStore('players', { keyPath: 'id', autoIncrement: true });
                 playerStore.createIndex('teamId', 'teamId', { unique: false });
                 playerStore.createIndex('name', 'name', { unique: false });
-                // Compound index to ensure number uniqueness per team
                 playerStore.createIndex('team_number', ['teamId', 'number'], { unique: true });
             }
             
@@ -67,11 +64,18 @@ export function initDB() {
             dbInstance = event.target.result;
             console.log('IndexedDB connected successfully');
             
-            // Handle DB close / connection issues
             dbInstance.onversionchange = () => {
                 dbInstance.close();
-                alert('La base de datos fue actualizada en otra pestaña. Por favor recarga la página.');
-                location.reload();
+                // Show an inline notification instead of blocking alert
+                const banner = document.createElement('div');
+                banner.style.cssText = 'position:fixed;top:0;left:0;right:0;padding:1rem 1.5rem;background:#ef4444;color:#fff;text-align:center;font-weight:600;z-index:9999;';
+                banner.textContent = '⚠️ La base de datos fue actualizada. Por favor recarga la página.';
+                const btn = document.createElement('button');
+                btn.textContent = 'Recargar';
+                btn.style.cssText = 'margin-left:1rem;padding:0.25rem 0.75rem;background:#fff;color:#ef4444;border:none;border-radius:4px;cursor:pointer;font-weight:700;';
+                btn.onclick = () => location.reload();
+                banner.appendChild(btn);
+                document.body.prepend(banner);
             };
             
             resolve(dbInstance);
@@ -79,6 +83,7 @@ export function initDB() {
         
         request.onerror = (event) => {
             console.error('Failed to open IndexedDB:', event.target.error);
+            dbPromise = null; // Reset promise on error to allow retry
             reject(event.target.error);
         };
     });
@@ -86,13 +91,12 @@ export function initDB() {
     return dbPromise;
 }
 
-/**
- * Returns the active database instance. Throws error if not initialized.
- * @returns {IDBDatabase}
- */
 export function getDB() {
     if (!dbInstance) {
-        throw new Error('Database is not initialized. Call initDB() first.');
+        initDB(); 
+        if (!dbInstance) {
+            throw new Error('La conexión a IndexedDB aún no está inicializada. Usa "await initDB()" antes de acceder.');
+        }
     }
     return dbInstance;
 }

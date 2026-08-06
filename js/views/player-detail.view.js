@@ -1,7 +1,7 @@
-// js/views/player-detail.view.js
-import { getPlayerById } from '../db/players.db.js';
-import { getTeamById } from '../db/teams.db.js';
-import { getEventsByPlayer } from '../db/events.db.js';
+
+import { playersDb } from '../db/players.db.js';
+import { teamsDb } from '../db/teams.db.js'; 
+import { getEventsByPlayer } from '../db/events.db.js'; 
 import { getActiveLeague } from '../db/leagues.db.js';
 import { SPORTS } from '../sports-terms.js';
 
@@ -12,7 +12,7 @@ export async function renderPlayerDetail(container, params) {
     loading.setAttribute('message', 'Cargando perfil del jugador...');
     container.appendChild(loading);
 
-    const player = await getPlayerById(playerId);
+    const player = await playersDb.getById(playerId); 
     if (!player) {
         container.textContent = '';
         const h2 = document.createElement('h2');
@@ -26,24 +26,27 @@ export async function renderPlayerDetail(container, params) {
         return;
     }
 
-    const team = await getTeamById(player.teamId);
+    const team = await teamsDb.getById(player.teamId); 
     const activeLeague = await getActiveLeague();
     const sportConfig = SPORTS[activeLeague?.sport] || SPORTS.futbol;
     const events = await getEventsByPlayer(playerId);
 
     container.textContent = '';
 
-    // Navegación de retorno
     const backNav = document.createElement('div');
     backNav.className = 'back-nav';
     const backLink = document.createElement('a');
-    backLink.href = '#players';
     backLink.className = 'btn btn-secondary';
-    backLink.textContent = '← Volver a Jugadores';
+    if (team) {
+        backLink.href = `#team/${player.teamId}`;
+        backLink.textContent = '← Volver al Equipo';
+    } else {
+        backLink.href = '#players';
+        backLink.textContent = '← Volver a Jugadores';
+    }
     backNav.appendChild(backLink);
     container.appendChild(backNav);
 
-    // Cabecera de perfil
     const profileHeader = document.createElement('div');
     profileHeader.className = 'profile-header glass-panel';
 
@@ -94,7 +97,6 @@ export async function renderPlayerDetail(container, params) {
     profileHeader.appendChild(profileInfo);
     container.appendChild(profileHeader);
 
-    // Tarjetas de estadísticas
     const statsGrid = document.createElement('div');
     statsGrid.className = 'stats-overview-grid';
 
@@ -111,20 +113,19 @@ export async function renderPlayerDetail(container, params) {
         return card;
     };
 
-    const matchesPlayed = player.stats?.matchesPlayed || 0;
+    const matchesPlayed = player.stats?.played ?? player.stats?.matchesPlayed ?? 0;
     const totalGoals = player.stats?.goals || 0;
     const average = matchesPlayed ? (totalGoals / matchesPlayed).toFixed(2) : '0.00';
 
     statsGrid.appendChild(createStatCard('Partidos Jugados', matchesPlayed));
-    statsGrid.appendChild(createStatCard(`${sportConfig.scoreEvent}s Totales`, totalGoals));
+    statsGrid.appendChild(createStatCard(`${sportConfig.scoreEventPlural} Totales`, totalGoals));
     statsGrid.appendChild(createStatCard('Promedio por Partido', average));
     container.appendChild(statsGrid);
 
-    // Historial de eventos
     const sectionContainer = document.createElement('div');
     sectionContainer.className = 'section-container glass-panel';
     const h2History = document.createElement('h2');
-    h2History.textContent = `Historial de ${sportConfig.scoreEvent}s`;
+    h2History.textContent = `Historial de ${sportConfig.scoreEventPlural}`;
     sectionContainer.appendChild(h2History);
 
     const historyList = document.createElement('div');

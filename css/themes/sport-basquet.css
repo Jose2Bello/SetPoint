@@ -1,7 +1,43 @@
 /* css/themes/sport-basquet.css */
+/* Tema Básquetbol: oscuro con naranja claro y rebordes oscuros */
 .sport-basquet {
-    --color-accent: #f97316;
-    --color-accent-hover: #ea580c;
-    --color-accent-glow: rgba(249, 115, 22, 0.35);
-    --color-accent-rgb: 249, 115, 22;
+    --color-accent: #fb923c;
+    --color-accent-hover: #f97316;
+    --color-accent-glow: rgba(251, 146, 60, 0.35);
+    --color-accent-rgb: 251, 146, 60;
+
+    --color-bg-base: #14161c;
+    --color-bg-surface: rgba(20, 22, 28, 0.6);
+    --color-bg-surface-hover: rgba(30, 33, 41, 0.8);
+    --color-header-bg: rgba(12, 14, 19, 0.8);
+    --color-footer-bg: rgba(12, 14, 19, 0.92);
+    --color-bg-card: rgba(28, 31, 39, 0.72);
+    --color-bg-modal: #1a1d24;
+    --color-bg-solid: #1e222b;
+    --color-bg-solid-deep: #101218;
+    --color-bg-input: rgba(12, 14, 19, 0.5);
+    --color-bg-overlay: rgba(0, 0, 0, 0.7);
+
+    --color-border: rgba(251, 146, 60, 0.22);
+    --color-border-hover: rgba(251, 146, 60, 0.45);
+    --color-border-strong: #2b303b;
+    --color-btn-secondary-bg: rgba(255, 255, 255, 0.06);
+    --color-btn-secondary-bg-hover: rgba(255, 255, 255, 0.12);
+    --color-row-hover: rgba(251, 146, 60, 0.06);
+
+    --color-text-primary: #f4f6f8;
+    --color-text-secondary: #cbd5e1;
+    --color-text-muted: #8b93a1;
+
+    --color-surface-gradient: linear-gradient(145deg, rgba(30, 34, 43, 0.85), rgba(16, 18, 24, 0.95));
+    --color-header-gradient: linear-gradient(135deg, rgba(26, 29, 36, 0.9), rgba(16, 18, 24, 0.95));
+    --color-glow-a: rgba(251, 146, 60, 0.08);
+    --color-glow-b: rgba(251, 146, 60, 0.05);
+}
+
+/* Logo de básquetbol con fondo blanco para que se vean las letras */
+.sport-basquet .logo-grid-container {
+    height: 56px;
+    max-width: 170px;
+    background: #ffffff;
 }

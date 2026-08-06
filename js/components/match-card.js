@@ -6,7 +6,11 @@ export class MatchCard extends HTMLElement {
         const awayName = this.getAttribute('away-name') || 'Visitante';
         const homeShield = this.getAttribute('home-shield') || '';
         const awayShield = this.getAttribute('away-shield') || '';
-        const status = this.getAttribute('status') || 'scheduled';
+        const rawStatus = this.getAttribute('status') || 'Programado';
+        const status = rawStatus === 'finished' ? 'Finalizado' : rawStatus === 'in_progress' ? 'En Juego' : rawStatus === 'scheduled' ? 'Programado' : rawStatus;
+        const statusClass = status.toLowerCase().replace(/\s+/g, '-');
+        const isFinished = status === 'Finalizado';
+        const isInProgress = status === 'En Juego';
         const homeScore = this.getAttribute('home-score') || '0';
         const awayScore = this.getAttribute('away-score') || '0';
         const date = this.getAttribute('date') || '';
@@ -14,7 +18,7 @@ export class MatchCard extends HTMLElement {
 
         this.textContent = '';
         const cardDiv = document.createElement('div');
-        cardDiv.className = `card match-card status-${status}`;
+        cardDiv.className = `card match-card status-${statusClass}`;
         cardDiv.style.cursor = 'pointer';
 
         // Cabecera con ronda o fecha
@@ -27,7 +31,7 @@ export class MatchCard extends HTMLElement {
 
         const statusBadge = document.createElement('span');
         statusBadge.className = `badge status-${status}`;
-        statusBadge.textContent = status === 'finished' ? 'Finalizado' : 'Programado';
+        statusBadge.textContent = isFinished ? 'Finalizado' : isInProgress ? 'En Juego' : 'Programado';
         topBar.appendChild(statusBadge);
         cardDiv.appendChild(topBar);
 
@@ -45,7 +49,7 @@ export class MatchCard extends HTMLElement {
         // Centro (Marcador o VS)
         const centerDiv = document.createElement('div');
         centerDiv.className = 'match-center';
-        if (status === 'finished') {
+        if (isFinished) {
             centerDiv.innerHTML = `<span class="score">${homeScore} - ${awayScore}</span>`;
         } else {
             centerDiv.innerHTML = `<span class="vs">VS</span>`;

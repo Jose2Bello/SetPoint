@@ -1,4 +1,3 @@
-/* js/components/loading-state.js */
 class LoadingState extends HTMLElement {
     connectedCallback() {
         this.innerHTML = `
@@ -7,6 +6,12 @@ class LoadingState extends HTMLElement {
                 <div class="text-secondary font-medium">Cargando datos...</div>
             </div>
         `;
+    }
+
+   
+    async hideAfter(ms = 2000) {
+        await new Promise((resolve) => setTimeout(resolve, ms));
+        this.remove(); // Se elimina a sí mismo del DOM
     }
 }
 

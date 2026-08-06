@@ -11,7 +11,18 @@ export const SPORTS = {
         rankingTitle: 'Goleadores',
         themeClass: 'sport-futbol',
         icon: '⚽',
-        defaultPositions: ['Portero', 'Defensa', 'Centrocampista', 'Delantero']
+        logo: 'assets/Sin título.png',
+        defaultPositions: ['Portero', 'Defensa', 'Centrocampista', 'Delantero'],
+        positionAbbreviations: {
+            'Portero': 'POR',
+            'Defensa': 'DEF',
+            'Centrocampista': 'MED',
+            'Delantero': 'DEL'
+        },
+        infractions: [
+            { type: 'Tarjeta Amarilla', key: 'yellowCards', label: '🟨 Tarjeta Amarilla', short: '🟨 Amarilla' },
+            { type: 'Tarjeta Roja', key: 'redCards', label: '🟥 Tarjeta Roja', short: '🟥 Roja' }
+        ]
     },
     basquet: {
         id: 'basquet',
@@ -23,7 +34,19 @@ export const SPORTS = {
         rankingTitle: 'Encestadores',
         themeClass: 'sport-basquet',
         icon: '🏀',
-        defaultPositions: ['Base', 'Escolta', 'Alero', 'Ala-Pívot', 'Pívot']
+        logo: 'assets/set point logo basket.png',
+        defaultPositions: ['Base', 'Escolta', 'Alero', 'Ala-Pívot', 'Pívot'],
+        positionAbbreviations: {
+            'Base': 'BASE',
+            'Escolta': 'ESC',
+            'Alero': 'ALE',
+            'Ala-Pívot': 'AP',
+            'Pívot': 'PIV'
+        },
+        infractions: [
+            { type: 'Falta Personal', key: 'yellowCards', label: '🟨 Falta Personal', short: '🟨 Falta' },
+            { type: 'Falta Técnica / Expulsión', key: 'redCards', label: '🟥 Falta Técnica', short: '🟥 Técnica' }
+        ]
     },
     voleibol: {
         id: 'voleibol',
@@ -35,7 +58,19 @@ export const SPORTS = {
         rankingTitle: 'Anotadores',
         themeClass: 'sport-voleibol',
         icon: '🏐',
-        defaultPositions: ['Colocador', 'Rematador', 'Central', 'Líbero', 'Opuesto']
+        logo: 'assets/setpoint voley logo.png',
+        defaultPositions: ['Colocador', 'Rematador', 'Central', 'Líbero', 'Opuesto'],
+        positionAbbreviations: {
+            'Colocador': 'COL',
+            'Rematador': 'REM',
+            'Central': 'CEN',
+            'Líbero': 'LIB',
+            'Opuesto': 'OPU'
+        },
+        infractions: [
+            { type: 'Tarjeta Amarilla', key: 'yellowCards', label: '🟨 Tarjeta Amarilla', short: '🟨 Amarilla' },
+            { type: 'Tarjeta Roja', key: 'redCards', label: '🟥 Tarjeta Roja', short: '🟥 Roja' }
+        ]
     }
 };
 
@@ -45,5 +80,13 @@ export const SPORTS = {
  * @returns {object} Terminology configurations
  */
 export function getSportConfig(sportId) {
-    return SPORTS[sportId] || SPORTS.futbol;
+    const config = SPORTS[sportId] || SPORTS.futbol;
+    return {
+        ...config,
+        infractions: config.infractions || [
+            { type: 'Tarjeta Amarilla', key: 'yellowCards', label: '🟨 Tarjeta Amarilla', short: '🟨 Amarilla' },
+            { type: 'Tarjeta Roja', key: 'redCards', label: '🟥 Tarjeta Roja', short: '🟥 Roja' }
+        ]
+    };
 }
+
