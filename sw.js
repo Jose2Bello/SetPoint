@@ -1,5 +1,5 @@
 /* Service Worker: SetPoint PWA */
-const CACHE_NAME = 'setpoint-v4';
+const CACHE_NAME = 'setpoint-v6';
 const APP_SHELL = [
     './',
     './index.html',
@@ -15,6 +15,7 @@ const APP_SHELL = [
     './css/views/players.css',
     './css/views/dashboard.css',
     './css/views/leagues.css',
+    './css/views/landing.css',
     './css/views/teams.css',
     './css/views/match-detail.css',
     './css/themes/sport-futbol.css',
@@ -50,7 +51,9 @@ const APP_SHELL = [
     './js/utils/storage.js',
     './js/utils/validators.js',
     './js/utils/input-limit.js',
+    './js/utils/tactical.js',
     './js/views/dashboard.view.js',
+    './js/views/landing.view.js',
     './js/views/leagues.view.js',
     './js/views/teams.view.js',
     './js/views/team-detail.view.js',
@@ -73,7 +76,9 @@ const APP_SHELL = [
     './assets/Football Field horizontal.jpg',
     './assets/Football Field.jpg',
     './assets/volleyball-field.png',
-    './assets/Wooden-Basketball-Court-Wallpaper-Mural.jpg'
+    './assets/Wooden-Basketball-Court-Wallpaper-Mural.jpg',
+    './assets/no-image.webp',
+    './assets/upload-icon.png'
 ];
 
 self.addEventListener('install', (event) => {

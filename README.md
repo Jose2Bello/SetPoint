@@ -1,6 +1,6 @@
 # SetPoint — Gestor de Liga Deportiva (SPA)
 
-Aplicación web de **una sola página (SPA)** para gestionar ligas amateur de múltiples deportes: **Fútbol**, **Básquetbol** y **Vóleibol**. Está construida con **HTML, CSS y JavaScript vanilla** (módulos ES6), usa **IndexedDB** como base de datos local del navegador, **Chart.js** (CDN) para gráficos y **LocalStorage** solo para preferencias. Funciona **100% offline** abriendo `index.html` directamente, sin servidor.
+Aplicación web de **una sola página (SPA)** para gestionar ligas amateur de múltiples deportes: **Fútbol**, **Básquetbol** y **Vóleibol**. Está construida con **HTML, CSS y JavaScript vanilla** (módulos ES6), usa **IndexedDB** como base de datos local del navegador, **Chart.js** (CDN) para gráficos y **LocalStorage** solo para preferencias.
 
 ---
 
@@ -11,7 +11,7 @@ Aplicación web de **una sola página (SPA)** para gestionar ligas amateur de m�
 3. Desde `#leagues` crea tu primera liga (elige deporte y modalidad), agrega equipos y jugadores, genera el fixture o bracket y comienza a registrar partidos.
 4. Para instalarla como PWA usa el icono "Instalar" del navegador (usa `sw.js` + `manifest.webmanifest`).
 
-> ⚠️ Si usas modo incógnito estricto que bloquee IndexedDB, la app mostrará un error de inicialización.
+>  Si usas modo incógnito estricto que bloquee IndexedDB, la app mostrará un error de inicialización.
 
 ---
 
@@ -59,6 +59,7 @@ SetPoint/
 │   └── views/
 │       ├── dashboard.css          # Estilos del #dashboard
 │       ├── leagues.css            # Estilos de ligas + bracket visual
+│       ├── landing.css            # Estilos de la landing (#landing)
 │       ├── players.css            # Estilos de #players
 │       ├── teams.css              # Estilos de equipos + pizarra táctica (importado en main.css)
 │       └── match-detail.css       # Estilos de detalle de partido (importado en main.css)
@@ -74,7 +75,7 @@ SetPoint/
 │   │   ├── players.db.js          # CRUD de jugadores (índice por teamId)
 │   │   ├── matches.db.js          # CRUD de partidos (índice por leagueId)
 │   │   ├── events.db.js           # CRUD de eventos de partido (índice por matchId/playerId)
-│   │   └── transactions.js        # ⭐ OPERACIONES DE INTEGRIDAD (ver sección 6)
+│   │   └── transactions.js        # OPERACIONES DE INTEGRIDAD (ver sección 6)
 │   ├── services/
 │   │   ├── league.service.js      # Unicidad de nombre, export/import JSON
 │   │   ├── team.service.js        # Unicidad de nombre, borrado con restricciones
@@ -205,7 +206,7 @@ Todas abren su propia transacción `'readonly'` o `'readwrite'` de **un solo sto
 
 ---
 
-## 6. ⭐ Transacciones de integridad — `js/db/transactions.js`
+## 6.  Transacciones de integridad — `js/db/transactions.js`
 
 Este es el archivo más importante del proyecto. Todas las operaciones que tocan **más de una entidad** se ejecutan dentro de **una sola transacción `readwrite` real** (`db.transaction([...stores], 'readwrite')`). Si algo falla, IndexedDB aborta la transacción y **no se aplica nada** (rollback automático). Todas capturan `tx.onerror` y `tx.onabort` y devuelven una Promise.
 
@@ -243,7 +244,7 @@ Flujo exacto:
 4. **Limpia los slots descendentes:** para `nextMatchId` (ganador) y `loserNextMatchId` (perdedor), pone ese slot a `null` (vuelve a "Por definir") — solo si el siguiente está `Programado` (garantizado por el paso 3).
 5. Restablece el partido a `status='Programado'`, `score={0,0}`, `winnerId=null`.
 6. **Elimina los eventos** asociados al partido (`eventsStore.delete(ev.id)`).
-   > ⚠️ Nota: a diferencia de lo que sugiere el documento de requerimientos, la implementación actual **sí borra los eventos** al deshacer.
+   >  Nota: a diferencia de lo que sugiere el documento de requerimientos, la implementación actual **sí borra los eventos** al deshacer.
 7. **Solo modalidad `liga`**: revierte `stats` de ambos equipos (`played-1`, resta goles, `won-3pts`/`drawn-1pt`/`lost`, recalcula `goalsDiff`).
 8. Revierte `stats` de cada jugador con `Math.max(0, …)` para no dejar valores negativos.
 
