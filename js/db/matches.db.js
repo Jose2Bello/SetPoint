@@ -51,7 +51,7 @@ export function createMatch(match) {
             homeTeamId: match.homeTeamId ? Number(match.homeTeamId) : null,
             awayTeamId: match.awayTeamId ? Number(match.awayTeamId) : null,
             date: match.date || null,
-            status: match.status || 'scheduled',
+            status: match.status || 'Programado',
             homeScore: match.homeScore !== undefined ? match.homeScore : 0,
             awayScore: match.awayScore !== undefined ? match.awayScore : 0,
             round: match.round !== undefined ? match.round : null,
