@@ -277,6 +277,165 @@
     font-weight: bold;
 }
 
+/* Grid de tarjetas de jugadores */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+/* Cuerpo de la vista de equipo: secciones espaciadas */
+.team-detail-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+/* Tarjeta de jugador (custom element player-card) */
+.player-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.player-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(var(--color-accent-rgb), 0.5);
+    box-shadow: 0 8px 24px rgba(var(--color-accent-rgb), 0.2);
+}
+
+.player-card-header {
+    position: relative;
+    height: 120px;
+    background: var(--color-header-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.player-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.player-avatar-placeholder {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(var(--color-accent-rgb), 0.25);
+    border: 2px solid rgba(var(--color-accent-rgb), 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--color-text-primary);
+}
+
+.player-badge {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: var(--color-accent);
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.85rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+
+.player-card-body {
+    padding: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.player-name {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--color-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.player-position {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+}
+
+.player-team-tag {
+    align-self: flex-start;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--color-accent);
+    background: rgba(var(--color-accent-rgb), 0.12);
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    margin-top: 0.15rem;
+}
+
+/* Filas de partidos (próximos / historial) */
+.match-list-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-solid-deep);
+    border-radius: 10px;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.match-list-item:hover {
+    border-color: rgba(var(--color-accent-rgb), 0.5);
+    transform: translateX(3px);
+}
+
+.match-list-item .match-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: left;
+}
+
+.match-versus {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.match-versus .vs {
+    color: var(--color-accent);
+    font-weight: 800;
+    font-size: 0.85rem;
+}
+
+.status-scheduled {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+}
+
+.fw-bold {
+    font-weight: 700;
+}
+
 .chart-container {
     width: 100%;
     height: 200px;
@@ -411,3 +570,337 @@
     padding: 0.2rem;
     cursor: pointer;
 }
+
+/* ==========================================
+   PIZARRA TÁCTICA Y ALINEACIÓN (TERRENO DE JUEGO)
+   ========================================== */
+.tactical-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.tactical-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--color-border-strong);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+}
+
+.tactical-controls-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.tactical-sport-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.8rem;
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 20px;
+    color: #60a5fa;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.tactical-formation-select {
+    background: var(--color-bg-surface, #1e293b);
+    color: var(--color-text-primary, #f8fafc);
+    border: 1px solid var(--color-border-strong, #334155);
+    border-radius: 8px;
+    padding: 0.45rem 0.9rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.tactical-formation-select:focus {
+    border-color: var(--color-accent, #3b82f6);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+/* TERRENO DE JUEGO CONTENEDOR */
+.tactical-pitch-board {
+    position: relative;
+    align-self: center;
+    width: auto;
+    max-width: 100%;
+    height: 460px;
+    margin: 0 auto;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    background-color: var(--color-bg-solid-deep, #0b1220);
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    user-select: none;
+    touch-action: none;
+}
+
+.tactical-pitch-futbol {
+    aspect-ratio: 1500 / 1061;
+}
+
+.tactical-pitch-basquet {
+    aspect-ratio: 3200 / 1920;
+}
+
+.tactical-pitch-voleibol {
+    aspect-ratio: 1500 / 1143;
+}
+
+.tactical-pitch-overlay {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.45) 100%);
+    pointer-events: none;
+}
+
+.tactical-pitch-hint {
+    position: absolute;
+    top: auto;
+    left: 10px;
+    bottom: 10px;
+    transform: none;
+    max-width: calc(100% - 20px);
+    background: rgba(15, 23, 42, 0.7);
+    color: #e2e8f0;
+    padding: 0.3rem 0.7rem;
+    border-radius: 14px;
+    font-size: 0.72rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(6px);
+    z-index: 5;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    opacity: 0.85;
+}
+
+/* FICHAS DE JUGADORES SOBRE LA CANCHA */
+.pitch-player-token {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: transform 0.15s ease-out, filter 0.2s;
+    touch-action: none;
+}
+
+.pitch-player-token:hover {
+    transform: translate(-50%, -50%) scale(1.1);
+    z-index: 20;
+}
+
+.pitch-player-token.is-dragging {
+    transform: translate(-50%, -50%) scale(1.2);
+    z-index: 30 !important;
+    filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.6));
+}
+
+.pitch-token-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    border: 2px solid var(--team-primary-color, #3b82f6);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 10px rgba(59, 130, 246, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 0.95rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.pitch-token-badge img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.pitch-token-number {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.pitch-token-pos-tag {
+    margin-top: 4px;
+    background: rgba(15, 23, 42, 0.85);
+    color: #38bdf8;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.15rem 0.45rem;
+    border-radius: 10px;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    backdrop-filter: blur(4px);
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+}
+
+.pitch-token-name {
+    margin-top: 2px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* SECCIÓN DE SUPLENTES / BANCA */
+.tactical-bench-panel {
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid var(--color-border-strong);
+    border-radius: 12px;
+    padding: 1rem;
+}
+
+.tactical-bench-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.tactical-bench-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.bench-players-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.75rem;
+}
+
+.bench-player-card {
+    background: var(--color-bg-surface, #1e293b);
+    border: 1px solid var(--color-border, #334155);
+    border-radius: 10px;
+    padding: 0.6rem 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.bench-player-card:hover {
+    background: rgba(30, 41, 59, 0.9);
+    border-color: var(--color-accent, #3b82f6);
+}
+
+.bench-player-info {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+}
+
+.bench-player-num {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--color-btn-secondary-bg);
+    border: 1px solid var(--color-border-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--color-text-primary);
+    flex-shrink: 0;
+}
+
+.bench-player-details {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.bench-player-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.bench-player-pos {
+    font-size: 0.73rem;
+    color: var(--color-text-muted);
+}
+
+.btn-bench-action {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+/* Modals & Popovers Tácticos */
+.tactical-popover {
+    position: fixed;
+    z-index: 9999;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 0.75rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 180px;
+    animation: fadeIn 0.15s ease-out;
+}
+
+@media (max-width: 768px) {
+    .tactical-pitch-board {
+        height: 340px;
+    }
+    .pitch-token-badge {
+        width: 36px;
+        height: 36px;
+        font-size: 0.85rem;
+    }
+    .pitch-token-pos-tag {
+        font-size: 0.6rem;
+        padding: 0.1rem 0.35rem;
+    }
+    .pitch-token-name {
+        font-size: 0.65rem;
+        max-width: 75px;
+    }
+}

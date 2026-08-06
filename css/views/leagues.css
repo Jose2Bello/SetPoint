@@ -258,6 +258,16 @@
     flex-shrink: 0;
 }
 
+.team-avatar-img {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-solid-deep);
+    flex-shrink: 0;
+}
+
 .winner .team-avatar {
     background: rgba(16, 185, 129, 0.2);
     border-color: rgba(16, 185, 129, 0.4);

@@ -3,12 +3,14 @@ import { initDB } from './db/connection.js';
 import { router } from './router.js';
 import { storage } from './utils/storage.js';
 import { leaguesDb } from './db/leagues.db.js';
+import { initGlobalInputLimits } from './utils/input-limit.js';
 
 // Requerimos componentes de estado simple primero
 import './components/loading-state.js';
 import './components/confirm-dialog.js';
 import './components/toast.js';
 import './components/footer.js';
+import './components/player-card.js';
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -22,6 +24,9 @@ if ('serviceWorker' in navigator) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // 0. Guardia global de límites de caracteres en formularios
+    initGlobalInputLimits();
+
     // 1. Set Visual Theme Class (Dark mode is default)
     const theme = storage.getTheme();
     document.body.classList.add(theme === 'light' ? 'light-theme' : 'dark-theme');

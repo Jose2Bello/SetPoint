@@ -145,7 +145,7 @@ function render(container, activeLeague, teams, matches) {
                         </div>
                         <div>
                             <label style="display:block; font-size:0.8rem; color:var(--color-text-muted); margin-bottom:0.2rem;">Jornada</label>
-                            <input type="text" name="round" class="form-control" placeholder="Ej. 1" style="width:100%; box-sizing:border-box;" />
+                            <input type="text" name="round" class="form-control" placeholder="Ej. 1" maxlength="20" style="width:100%; box-sizing:border-box;" />
                         </div>
                     </div>
                     <div style="display:flex; gap:0.75rem; justify-content:flex-end;">

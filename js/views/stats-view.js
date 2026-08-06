@@ -80,7 +80,7 @@ export async function renderStats(container) {
     const pSub = document.createElement('p');
     pSub.textContent = 'Resumen general de la liga: ';
     const strongLeague = document.createElement('strong');
-    strongLeague.textContent = `${sportConfig.icon} ${activeLeague.name}`;
+    strongLeague.textContent = `${activeLeague.name}`;
     strongLeague.style.color = 'var(--color-text-primary)';
     pSub.appendChild(strongLeague);
     headerDiv.appendChild(h1);
@@ -115,7 +115,7 @@ export async function renderStats(container) {
 
     kpiGrid.appendChild(createKpiCard('Partidos Jugados', `${finishedMatches.length} / ${matches.length}`, 'Completados en el calendario'));
     kpiGrid.appendChild(createKpiCard(`${sportConfig.scoreEventPlural} Totales`, totalGoals, `Promedio de ${avgGoals} por partido`));
-    kpiGrid.appendChild(createKpiCard('Infracciones Totales', `${totalYellows + totalReds}`, `🟨 ${totalYellows} Amarillas / Faltas · 🟥 ${totalReds} Rojas`));
+    kpiGrid.appendChild(createKpiCard('Infracciones Totales', `${totalYellows + totalReds}`, `${totalYellows} Amarillas / Faltas · ${totalReds} Rojas`));
     kpiGrid.appendChild(createKpiCard('Atletas Registrados', players.length, 'Plantel total de la liga'));
     
     container.appendChild(kpiGrid);
@@ -130,7 +130,7 @@ export async function renderStats(container) {
     scorersCard.className = 'dashboard-card col-span-6';
     scorersCard.innerHTML = `
         <div class="dashboard-card-title">
-            <span>⚽ Tabla de ${sportConfig.rankingTitle || 'Anotadores'}</span>
+            <span>Tabla de ${sportConfig.rankingTitle || 'Anotadores'}</span>
         </div>
         ${topScorers.length === 0 ? `<p class="text-muted text-sm" style="padding:1rem 0;">Aún no hay anotaciones registradas.</p>` : `
             <table class="dashboard-table">
@@ -164,12 +164,12 @@ export async function renderStats(container) {
     const infractionsCard = document.createElement('div');
     infractionsCard.className = 'dashboard-card col-span-6';
     const infLabels = sportConfig.infractions || [
-        { short: '🟨 Amarilla' },
-        { short: '🟥 Roja' }
+        { short: 'Amarilla' },
+        { short: 'Roja' }
     ];
     infractionsCard.innerHTML = `
         <div class="dashboard-card-title">
-            <span>🟨 Leaderboard de Infracciones y Tarjetas</span>
+            <span>Leaderboard de Infracciones y Tarjetas</span>
         </div>
         ${infractions.length === 0 ? `<p class="text-muted text-sm" style="padding:1rem 0;">¡Excelente Juego Limpio! No hay tarjetas ni infracciones registradas.</p>` : `
             <table class="dashboard-table">
@@ -178,8 +178,8 @@ export async function renderStats(container) {
                         <th>#</th>
                         <th>Jugador</th>
                         <th>Equipo</th>
-                        <th>🟨 Amarillas/Faltas</th>
-                        <th>🟥 Rojas/Técnicas</th>
+                        <th>Amarillas/Faltas</th>
+                        <th>Rojas/Técnicas</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -205,7 +205,7 @@ export async function renderStats(container) {
     const chartCard = document.createElement('div');
     chartCard.className = 'dashboard-card col-span-12';
     chartCard.innerHTML = `
-        <div class="dashboard-card-title">📊 Gráfico Comparativo de Anotadores Principales</div>
+        <div class="dashboard-card-title">Gráfico Comparativo de Anotadores Principales</div>
         <div class="chart-wrapper" style="height: 260px;">
             <canvas id="chartStatsScorers"></canvas>
         </div>
