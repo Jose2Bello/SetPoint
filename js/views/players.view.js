@@ -77,10 +77,10 @@ export async function renderPlayersView(container) {
             </div>
 
             <!-- 2. JUGADORES DESTACADOS (CARRUSEL / SLIDER ABAJO) -->
-            ${allPlayers.length > 0 ? renderFeaturedSliderHTML(allPlayers, teamMap) : ''}
+            ${allPlayers.length > 0 ? renderFeaturedSliderHTML(allPlayers, teamMap, sportConfig) : ''}
 
             <!-- 3. TOP ANOTADORES (ABAJO) -->
-            ${allPlayers.length > 0 ? renderTopScorersHTML(allPlayers, teamMap) : ''}
+            ${allPlayers.length > 0 ? renderTopScorersHTML(allPlayers, teamMap, sportConfig) : ''}
 
         </div>
     `;
@@ -104,7 +104,7 @@ export async function renderPlayersView(container) {
             return matchesName && matchesTeam && matchesPos;
         });
 
-        renderPlayerCards(resultsGrid, filtered, teamMap);
+        renderPlayerCards(resultsGrid, filtered, teamMap, sportConfig);
     }
 
     searchInput.addEventListener('input', applyFilters);
@@ -152,7 +152,7 @@ function getPlayerAvatarHTML(player, size = '50px') {
 /**
  * Carrusel de Jugadores Destacados (Selección aleatoria de 6 a 8 jugadores)
  */
-function renderFeaturedSliderHTML(players, teamMap) {
+function renderFeaturedSliderHTML(players, teamMap, sportConfig) {
     if (!players || players.length === 0) return '';
 
     // Seleccionar entre 6 y 8 jugadores al azar (o todos si hay menos de 6)
@@ -192,7 +192,7 @@ function renderFeaturedSliderHTML(players, teamMap) {
                                 <span class="featured-stat-value">${p.position || 'Jugador'}</span>
                             </div>
                             <div class="featured-stat-item">
-                                <span style="font-size: 0.7rem; color: var(--color-text-muted);">Goles</span>
+                                <span style="font-size: 0.7rem; color: var(--color-text-muted);">${sportConfig.scoreEventPlural || 'Anotaciones'}</span>
                                 <span class="featured-stat-value">${p.stats?.goals || 0}</span>
                             </div>
                         </div>
@@ -206,7 +206,7 @@ function renderFeaturedSliderHTML(players, teamMap) {
 /**
  * Lista de Top Anotadores
  */
-function renderTopScorersHTML(players, teamMap) {
+function renderTopScorersHTML(players, teamMap, sportConfig) {
     const topScorers = [...players]
         .sort((a, b) => ((b.stats?.goals || 0) - (a.stats?.goals || 0)))
         .slice(0, 5);
@@ -229,7 +229,7 @@ function renderTopScorersHTML(players, teamMap) {
                         </div>
                         <div style="text-align: right;">
                             <span style="font-size: 1.2rem; font-weight: bold; color: #10b981;">${p.stats?.goals || 0}</span>
-                            <span style="font-size: 0.75rem; color: var(--color-text-muted); display: block;">Goles</span>
+                            <span style="font-size: 0.75rem; color: var(--color-text-muted); display: block;">${sportConfig.scoreEventPlural || 'Anotaciones'}</span>
                         </div>
                     </a>
                 `).join('')}
@@ -238,7 +238,7 @@ function renderTopScorersHTML(players, teamMap) {
     `;
 }
 
-function renderPlayerCards(container, players, teamMap) {
+function renderPlayerCards(container, players, teamMap, sportConfig) {
     if (players.length === 0) {
         container.innerHTML = `<p class="text-muted" style="grid-column: 1 / -1; text-align: center; padding: 2rem;">No se encontraron jugadores que coincidan con la búsqueda.</p>`;
         return;
@@ -258,7 +258,7 @@ function renderPlayerCards(container, players, teamMap) {
             </div>
             <div style="margin-top: 1rem; padding-top: 0.5rem; border-top: 1px solid var(--color-border); display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--color-text-muted);">
                 <span>Pos: <strong style="color: #60a5fa;">${p.position || 'N/A'}</strong></span>
-                <span>Goles: <strong style="color: var(--color-text-primary);">${p.stats?.goals || 0}</strong></span>
+                <span>${sportConfig.scoreEventPlural || 'Anotaciones'}: <strong style="color: var(--color-text-primary);">${p.stats?.goals || 0}</strong></span>
             </div>
         </a>
     `).join('');

@@ -113,14 +113,14 @@ export async function renderPlayerDetail(container, params) {
     const average = matchesPlayed ? (totalGoals / matchesPlayed).toFixed(2) : '0.00';
 
     statsGrid.appendChild(createStatCard('Partidos Jugados', matchesPlayed));
-    statsGrid.appendChild(createStatCard(`${sportConfig.scoreEvent}s Totales`, totalGoals));
+    statsGrid.appendChild(createStatCard(`${sportConfig.scoreEventPlural} Totales`, totalGoals));
     statsGrid.appendChild(createStatCard('Promedio por Partido', average));
     container.appendChild(statsGrid);
 
     const sectionContainer = document.createElement('div');
     sectionContainer.className = 'section-container glass-panel';
     const h2History = document.createElement('h2');
-    h2History.textContent = `Historial de ${sportConfig.scoreEvent}s`;
+    h2History.textContent = `Historial de ${sportConfig.scoreEventPlural}`;
     sectionContainer.appendChild(h2History);
 
     const historyList = document.createElement('div');
