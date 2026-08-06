@@ -134,7 +134,7 @@ export function createPlayer(playerData) {
                 photo: playerData.photo || null,
                 stats: playerData.stats || { 
                     goals: 0, 
-                    matchesPlayed: 0,
+                    played: 0,
                     yellowCards: 0,
                     redCards: 0
                 },

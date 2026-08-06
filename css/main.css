@@ -8,11 +8,16 @@
 @import url('views/players.css');
 @import url('views/dashboard.css');
 @import url('views/leagues.css');
+@import url('views/teams.css');
+@import url('views/match-detail.css');
 
 /* Themes (active via class on parent) */
 @import url('themes/sport-futbol.css');
 @import url('themes/sport-basquet.css');
 @import url('themes/sport-voleibol.css');
+
+/* Responsive last so it wins the cascade */
+@import url('responsive.css');
 
 /* Global UI classes and scroll behaviors */
 html {
