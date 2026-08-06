@@ -54,7 +54,7 @@ export async function renderPlayersView(container) {
                 <h3 style="margin-top: 0; margin-bottom: 1rem;">Todos los Jugadores</h3>
                 
                 <div class="filters-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-                    <input type="text" id="search-player-input" class="form-control" placeholder="Buscar por nombre (ej. Chavez)..." />
+                    <input type="text" id="search-player-input" class="form-control" placeholder="Buscar por nombre..." />
                     
                     <select id="filter-team-select" class="form-control">
                         <option value="">Todos los equipos</option>

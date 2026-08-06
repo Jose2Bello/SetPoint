@@ -164,7 +164,7 @@ export async function renderDashboard(container) {
 function renderEmptyState(container, message) {
     container.innerHTML = `
         <div class="empty-state-card glass-card text-center" style="padding: 3rem 1.5rem; margin-top: 2rem;">
-            <h2 class="text-xl font-bold mb-2">¡Bienvenido a LeagueHub!</h2>
+            <h2 class="text-xl font-bold mb-2">¡Bienvenido a SetPoint!</h2>
             <p class="text-secondary mb-4">${message}</p>
             <a href="#leagues" class="btn btn-primary">Ir a Gestión de Ligas</a>
         </div>
