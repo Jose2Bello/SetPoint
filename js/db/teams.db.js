@@ -46,9 +46,11 @@ export function createTeam(team) {
         const tx = db.transaction('teams', 'readwrite');
         const store = tx.objectStore('teams');
         
+        const sportVal = (team.sport || team.discipline || 'futbol').toLowerCase();
         const data = {
             leagueId: Number(team.leagueId) || null,
-            discipline: (team.discipline || team.sport || 'futbol').toLowerCase(),
+            sport: sportVal,
+            discipline: sportVal,
             name: team.name.trim(),
             logo: team.logo || team.shield || '', 
             primaryColor: team.primaryColor || '#3b82f6',

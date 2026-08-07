@@ -584,13 +584,15 @@ export function importLeagueData(dump) {
         const matchIdMap = {};
         
         const oldLeague = dump.league;
+        const leagueSport = (oldLeague.sport || oldLeague.discipline || 'futbol').toLowerCase();
         const newLeagueData = {
             name: oldLeague.name.trim(),
-            sport: oldLeague.sport,
+            sport: leagueSport,
+            discipline: leagueSport,
             mode: oldLeague.mode,
             rounds: oldLeague.rounds || null,
             bracketTeamsCount: oldLeague.bracketTeamsCount || null,
-            season: oldLeague.season.trim(),
+            season: oldLeague.season ? oldLeague.season.trim() : '',
             description: oldLeague.description || '',
             isActive: false,
             createdAt: oldLeague.createdAt || new Date().toISOString()
@@ -609,8 +611,11 @@ export function importLeagueData(dump) {
             
           teamsToImport.forEach(team => {
             const oldTeamId = team.id;
+            const teamSport = (team.sport || team.discipline || leagueSport).toLowerCase();
             const newTeamData = {
                 leagueId: newLeagueId,
+                sport: teamSport,
+                discipline: teamSport,
                 name: team.name,
         
                 logo: team.logo || team.shield || '', 

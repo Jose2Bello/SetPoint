@@ -18,8 +18,8 @@ const UPLOAD_ICON = 'assets/upload-icon.png';
  * Función auxiliar para obtener la disciplina/deporte de un equipo
  * dando soporte a 'sport' o 'discipline'
  */
-function getTeamSport(team) {
-    return (team.sport || team.discipline || 'futbol').toLowerCase();
+function getTeamSport(team, fallbackSport = '') {
+    return (team.sport || team.discipline || fallbackSport || 'futbol').toLowerCase();
 }
 
 export async function renderTeams(container) {
@@ -49,18 +49,20 @@ export async function renderTeams(container) {
     }));
 
     // Determina el deporte por defecto basándose en la liga o la primera clave disponible
-    const leagueSport = activeLeague?.sport || activeLeague?.discipline;
+    const leagueSport = (activeLeague?.sport || activeLeague?.discipline || '').toLowerCase();
     const initialSportFilter = (leagueSport || SPORT_KEYS[0] || 'futbol').toLowerCase();
 
-    renderListView(container, teamsWithPlayerCount, activeLeagueId, initialSportFilter);
+    renderListView(container, teamsWithPlayerCount, activeLeagueId, initialSportFilter, leagueSport);
 }
 
-function renderListView(container, teams, activeLeagueId, initialSportFilter) {
+function renderListView(container, teams, activeLeagueId, initialSportFilter, leagueSport = '') {
     let currentSportFilter = initialSportFilter;
 
     const render = () => {
+        const getSport = (t) => getTeamSport(t, leagueSport);
+
         // Filtra los equipos comparando la disciplina/deporte de forma normalizada
-        const filteredTeams = teams.filter(t => getTeamSport(t) === currentSportFilter);
+        const filteredTeams = teams.filter(t => getSport(t) === currentSportFilter);
 
         container.innerHTML = `
             <div class="teams-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
@@ -78,7 +80,7 @@ function renderListView(container, teams, activeLeagueId, initialSportFilter) {
                     const sportData = SPORTS[key] || { name: key, icon: '🏆' };
                     
                     // Cuenta los equipos asociados a esta disciplina
-                    const count = teams.filter(t => getTeamSport(t) === sportKeyNormalized).length;
+                    const count = teams.filter(t => getSport(t) === sportKeyNormalized).length;
                     const isActive = sportKeyNormalized === currentSportFilter;
 
                     return `
