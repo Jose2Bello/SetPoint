@@ -164,17 +164,19 @@ function setupListEventListeners(container, activeLeagueId, currentSportFilter, 
         });
     });
 
-    container.addEventListener('click', async (e) => {
-        const btn = e.target.closest('button');
-        if (!btn) return;
-
-        const id = Number(btn.dataset.id);
-        if (!id) return;
-
-        if (btn.classList.contains('btn-edit-team')) {
+    container.querySelectorAll('.btn-edit-team').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = Number(btn.dataset.id);
+            if (!id) return;
             const team = await teamsDb.getById(id);
             if (team) renderFormView(container, activeLeagueId, team, currentSportFilter);
-        } else if (btn.classList.contains('btn-delete-team')) {
+        });
+    });
+
+    container.querySelectorAll('.btn-delete-team').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = Number(btn.dataset.id);
+            if (!id) return;
             const leagueMatches = await matchesDb.getByLeague(activeLeagueId);
             const hasMatches = leagueMatches.some(m => m.homeTeamId === id || m.awayTeamId === id);
 
@@ -197,7 +199,7 @@ function setupListEventListeners(container, activeLeagueId, currentSportFilter, 
                     toast.error('Error al eliminar el equipo: ' + (err.message || err));
                 }
             }
-        }
+        });
     });
 }
 

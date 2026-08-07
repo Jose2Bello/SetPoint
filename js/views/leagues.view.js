@@ -97,23 +97,36 @@ function setupListEventListeners(container) {
     container.querySelector('#btnNewLeague')?.addEventListener('click', goForm);
     container.querySelector('#btnNewLeagueEmpty')?.addEventListener('click', goForm);
 
-    container.addEventListener('click', async (e) => {
-        const targetBtn = e.target.closest('button');
-        if (!targetBtn || !targetBtn.dataset.id) return;
+    container.querySelectorAll('.btn-manage').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = Number(btn.dataset.id);
+            if (id) renderLeagueDetailView(container, id);
+        });
+    });
 
-        const id = Number(targetBtn.dataset.id);
-        if (!id) return;
-
-        if (targetBtn.classList.contains('btn-manage')) {
-            renderLeagueDetailView(container, id);
-        } else if (targetBtn.classList.contains('btn-activate')) {
+    container.querySelectorAll('.btn-activate').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = Number(btn.dataset.id);
+            if (!id) return;
             storage.setActiveLeagueId(id);
             await transactions.activateLeague(id);
             renderLeagues(container);
-        } else if (targetBtn.classList.contains('btn-edit')) {
+        });
+    });
+
+    container.querySelectorAll('.btn-edit').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = Number(btn.dataset.id);
+            if (!id) return;
             const league = await leaguesDb.getById(id);
             if (league) renderFormView(container, league);
-        } else if (targetBtn.classList.contains('btn-delete')) {
+        });
+    });
+
+    container.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = Number(btn.dataset.id);
+            if (!id) return;
             const confirmed = await confirmAction('Eliminar Liga', '¿Estás seguro de eliminar esta liga? Se borrarán todos sus equipos, jugadores y partidos asociados.', { confirmText: 'Sí, eliminar' });
             if (confirmed) {
                 try {
@@ -127,9 +140,16 @@ function setupListEventListeners(container) {
                     toast.error('Error al eliminar la liga: ' + (err.message || err));
                 }
             }
-        } else if (targetBtn.classList.contains('btn-export')) {
-            await exportLeagueJson(id);
-        }
+        });
+    });
+
+    container.querySelectorAll('.btn-export').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const id = Number(btn.dataset.id);
+            if (id) await exportLeagueJson(id, btn);
+        });
     });
 
     const importInput = container.querySelector('#importJsonInput');
@@ -1043,39 +1063,53 @@ function renderFormView(container, leagueToEdit = null) {
     };
 }
 
-async function exportLeagueJson(leagueId) {
-    const league = await leaguesDb.getById(leagueId);
-    if (!league) return;
+let isExporting = false;
 
-    const teams = await teamsDb.getByLeague(leagueId);
-    const matches = await matchesDb.getByLeague(leagueId);
+async function exportLeagueJson(leagueId, btnElement = null) {
+    if (isExporting) return;
+    isExporting = true;
+    if (btnElement) btnElement.disabled = true;
 
-    let players = [];
-    for (const team of teams) {
-        const teamPlayers = playersDb.getByTeam ? await playersDb.getByTeam(team.id) : await getPlayersByTeam(team.id);
-        players = players.concat(teamPlayers || []);
+    try {
+        const league = await leaguesDb.getById(leagueId);
+        if (!league) return;
+
+        const teams = await teamsDb.getByLeague(leagueId);
+        const matches = await matchesDb.getByLeague(leagueId);
+
+        let players = [];
+        for (const team of teams) {
+            const teamPlayers = playersDb.getByTeam ? await playersDb.getByTeam(team.id) : await getPlayersByTeam(team.id);
+            players = players.concat(teamPlayers || []);
+        }
+
+        let events = [];
+        for (const match of matches) {
+            const matchEvents = eventsDb.getByMatch ? await eventsDb.getByMatch(match.id) : await getEventsByMatch(match.id);
+            events = events.concat(matchEvents || []);
+        }
+
+        const dump = {
+            exportedAt: new Date().toISOString(),
+            league,
+            teams,
+            players,
+            matches,
+            events
+        };
+
+        const blob = new Blob([JSON.stringify(dump, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `liga_${league.name.toLowerCase().replace(/\s+/g, '_')}_dump.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success('Liga exportada a JSON con éxito');
+    } catch (err) {
+        toast.error('Error al exportar liga: ' + (err.message || 'desconocido'));
+    } finally {
+        isExporting = false;
+        if (btnElement) btnElement.disabled = false;
     }
-
-    let events = [];
-    for (const match of matches) {
-        const matchEvents = eventsDb.getByMatch ? await eventsDb.getByMatch(match.id) : await getEventsByMatch(match.id);
-        events = events.concat(matchEvents || []);
-    }
-
-    const dump = {
-        exportedAt: new Date().toISOString(),
-        league,
-        teams,
-        players,
-        matches,
-        events
-    };
-
-    const blob = new Blob([JSON.stringify(dump, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `liga_${league.name.toLowerCase().replace(/\s+/g, '_')}_dump.json`;
-    a.click();
-    URL.revokeObjectURL(url);
 }
