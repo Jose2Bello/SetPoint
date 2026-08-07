@@ -35,9 +35,16 @@
     --color-glow-b: rgba(251, 146, 60, 0.05);
 }
 
-/* Logo de básquetbol con fondo blanco para que se vean las letras */
+/* Logo de básquet en el navbar: chip con el fondo de la página */
 .sport-basquet .logo-grid-container {
-    height: 56px;
-    max-width: 170px;
-    background: #ffffff;
+    height: 46px;
+    max-width: 220px;
+    background: var(--color-bg-base);
+    border-radius: 12px;
+    padding: 0 0.9rem;
+}
+
+.sport-basquet .brand-logo-img {
+    height: 34px;
+    transform: none;
 }

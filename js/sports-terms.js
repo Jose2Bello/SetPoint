@@ -34,7 +34,7 @@ export const SPORTS = {
         rankingTitle: 'Encestadores',
         themeClass: 'sport-basquet',
         icon: '🏀',
-        logo: 'assets/set point logo basket.png',
+        logo: 'assets/setpoint logo basket.png',
         defaultPositions: ['Base', 'Escolta', 'Alero', 'Ala-Pívot', 'Pívot'],
         positionAbbreviations: {
             'Base': 'BASE',

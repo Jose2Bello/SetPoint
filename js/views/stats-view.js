@@ -4,8 +4,17 @@ import { getAllPlayers } from '../db/players.db.js';
 import { getAllMatches } from '../db/matches.db.js';
 import { SPORTS, getSportConfig } from '../sports-terms.js';
 
+// Instancias de gráficos activas para destruirlas antes de re-renderizar
+let activeCharts = [];
+
+function destroyActiveCharts() {
+    activeCharts.forEach((c) => { try { c.destroy(); } catch (e) { /* noop */ } });
+    activeCharts = [];
+}
+
 export async function renderStats(container) {
     container.textContent = '';
+    destroyActiveCharts();
     const loading = document.createElement('loading-state');
     loading.setAttribute('message', 'Generando estadísticas y análisis...');
     container.appendChild(loading);
@@ -62,8 +71,6 @@ export async function renderStats(container) {
         .map(p => ({ ...p, goals: p.stats?.goals || 0 }))
         .filter(p => p.goals > 0)
         .sort((a, b) => b.goals - a.goals);
-
-    const topScorer = topScorers.length > 0 ? topScorers[0] : null;
 
     // Infractions ranking (yellow/red cards)
     const infractions = [...players]
@@ -221,13 +228,18 @@ export async function renderStats(container) {
     // Render Chart.js visual
     if (typeof Chart !== 'undefined' && topScorers.length > 0) {
         setTimeout(() => {
-            const ctx = document.getElementById('chartStatsScorers')?.getContext('2d');
+            const canvasEl = document.getElementById('chartStatsScorers');
+            const ctx = canvasEl?.getContext('2d');
             if (ctx) {
+                // Evita "Canvas is already in use" si un render previo quedó en vuelo
+                const existing = Chart.getChart(canvasEl);
+                if (existing) existing.destroy();
+
                 const bodyStyles = getComputedStyle(document.body);
                 const accentHex = (bodyStyles.getPropertyValue('--color-accent') || '#10b981').trim();
                 const accentRgb = (bodyStyles.getPropertyValue('--color-accent-rgb') || '16, 185, 129').trim();
                 const top6 = topScorers.slice(0, 6);
-                new Chart(ctx, {
+                activeCharts.push(new Chart(ctx, {
                     type: 'bar',
                     data: {
                         labels: top6.map(p => `#${p.number} ${p.name}`),
@@ -250,7 +262,7 @@ export async function renderStats(container) {
                             y: { beginAtZero: true, ticks: { precision: 0 } }
                         }
                     }
-                });
+                }));
             }
         }, 50);
     }

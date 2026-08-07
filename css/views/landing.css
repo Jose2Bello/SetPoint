@@ -91,15 +91,6 @@
     font-weight: 800;
 }
 
-/* ---------- Logo de liga ---------- */
-.landing-league-logo {
-    height: 48px;
-    width: auto;
-    max-width: 160px;
-    object-fit: contain;
-    flex-shrink: 0;
-}
-
 .landing-empty-state p {
     margin: 0 auto 1.25rem;
     max-width: 440px;

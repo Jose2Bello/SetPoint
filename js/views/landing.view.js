@@ -201,7 +201,6 @@ function renderLeagueSummary(league, teams, players, matches) {
 
     return `
         <div class="landing-league-header">
-            <img class="landing-league-logo" src="${sport.logo}" alt="${escapeHTML(sport.name)}">
             <div class="landing-league-info">
                 <h2>${escapeHTML(league.name)}</h2>
                 <div class="landing-league-meta">

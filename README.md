@@ -117,8 +117,13 @@ SetPoint/
     ├── Wooden-Basketball-Court-Wallpaper-Mural.jpg  # Cancha de básquet
     ├── volleyball-field.png       # Cancha de vóley
     ├── Sin título.png             # Logo de fútbol
-    ├── set point logo basket.png  # Logo de básquet
+    ├── setpoint logo basket.png # Logo de básquet
     ├── setpoint voley logo.png    # Logo de vóley
+    ├── icons/                     # Iconos PWA (manifest + apple-touch-icon + favicon)
+    │   ├── icon-192.png           # 192×192 (any)
+    │   ├── icon-512.png           # 512×512 (any y maskable)
+    │   ├── apple-touch-icon.png   # 180×180 (iOS)
+    │   └── favicon-32.png         # 32×32
     └── *.png (iconos de métricas, upload, no-image, favicon, …)
 ```
 

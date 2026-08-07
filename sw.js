@@ -1,5 +1,5 @@
 /* Service Worker: SetPoint PWA */
-const CACHE_NAME = 'setpoint-v12';
+const CACHE_NAME = 'setpoint-v16';
 const APP_SHELL = [
     './',
     './index.html',
@@ -63,9 +63,12 @@ const APP_SHELL = [
     './js/views/player-detail.view.js',
     './js/views/stats-view.js',
     './assets/Sin t\u00edtulo.png',
-    './assets/set point logo basket.png',
+    './assets/setpoint logo basket.png',
     './assets/setpoint voley logo.png',
-    './assets/movile%20icon.png',
+    './assets/icons/icon-192.png',
+    './assets/icons/icon-512.png',
+    './assets/icons/apple-touch-icon.png',
+    './assets/icons/favicon-32.png',
     './assets/teams_icon.png',
     './assets/partidos_totales%20icon.png',
     './assets/partidos_totales_basket%20icon.png',
