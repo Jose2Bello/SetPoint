@@ -10,7 +10,7 @@ class LeagueFooter extends HTMLElement {
         this.innerHTML = `
             <footer>
                 <div>
-                    &copy; ${year} SetPoint. Desarrollado por Jose Lopez y Santiago Salas
+                    &copy; ${year} SetPoint. Desarrollado por Jose Bello Lopez y Santiago Salas Lambarca.
                 </div>
                 <div class="db-status flex align-center gap-sm">
                     <span>Base de Datos:</span>
