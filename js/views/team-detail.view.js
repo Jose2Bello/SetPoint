@@ -520,7 +520,7 @@ function renderTacticalBoard(container, team, rawPlayers, activeLeague) {
 
     const hintBadge = document.createElement('div');
     hintBadge.className = 'tactical-pitch-hint';
-    hintBadge.innerHTML = '<span>💡</span> <span>Arrastra a los titulares para moverlos en el campo o haz clic para opciones</span>';
+    hintBadge.innerHTML = '<span>💡</span> <span>Arrastra a los titulares para moverlos en el campo</span>';
     pitchBoard.appendChild(hintBadge);
 
     container.appendChild(pitchBoard);
