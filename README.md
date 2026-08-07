@@ -344,7 +344,7 @@ Además de las funciones nombradas, el archivo exporta `revertMatch` (alias de `
 
 ## 13. PWA / Offline — `sw.js`
 
-- Precache del "app shell" (HTML, CSS, JS, assets, incluidas las canchas) en `setpoint-v3`.
+- Precache del "app shell" (HTML, CSS, JS, assets, incluidas las canchas) en `setpoint-v7`.
 - `install` → precache, `activate` → limpia cachés viejas, `fetch` → sirve desde caché para GET.
 - Requiere actualizar `CACHE_NAME` cuando cambien los archivos precacheados.
 

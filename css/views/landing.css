@@ -84,10 +84,11 @@
 }
 
 .landing-sport-pill img {
-    width: 32px;
     height: 32px;
+    width: auto;
+    max-width: 150px;
     object-fit: contain;
-    border-radius: 6px;
+    flex-shrink: 0;
 }
 
 /* ---------- Zona dinámica ---------- */
@@ -111,16 +112,20 @@
     background: var(--color-surface-gradient);
 }
 
-.landing-empty-icon {
-    font-size: 3rem;
-    margin-bottom: 0.75rem;
-}
-
 .landing-empty-state h2 {
     margin: 0 0 0.5rem;
     color: var(--color-text-primary);
     font-size: 1.4rem;
     font-weight: 800;
+}
+
+/* ---------- Logo de liga ---------- */
+.landing-league-logo {
+    height: 48px;
+    width: auto;
+    max-width: 160px;
+    object-fit: contain;
+    flex-shrink: 0;
 }
 
 .landing-empty-state p {
@@ -136,11 +141,6 @@
     align-items: center;
     gap: 1rem;
     flex-wrap: wrap;
-}
-
-.landing-league-icon {
-    font-size: 2.5rem;
-    line-height: 1;
 }
 
 .landing-league-info h2 {
@@ -168,10 +168,6 @@
     padding: 1.2rem 1rem;
     border-radius: var(--border-radius-md);
     border: 1px solid var(--color-border);
-}
-
-.landing-stat-icon {
-    font-size: 1.4rem;
 }
 
 .landing-stat-num {
@@ -347,10 +343,6 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-}
-
-.landing-feature-icon {
-    font-size: 1.75rem;
 }
 
 .landing-feature-title {

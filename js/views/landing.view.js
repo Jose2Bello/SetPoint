@@ -9,9 +9,9 @@ import { storage } from '../utils/storage.js';
 import { escapeHTML } from '../utils/dom.js';
 
 const FEATURES = [
-    { icon: '🏆', title: 'Ligas y Torneos', desc: 'Crea torneos personalizados con calendarios automáticos, tabla de posiciones y brackets de eliminación directa o doble.' },
-    { icon: '👥', title: 'Equipos y Jugadores', desc: 'Administra plantillas completas con dorsal, posición, fotos y estadísticas individuales de cada atleta.' },
-    { icon: '📊', title: 'Partidos y Marcadores', desc: 'Registra cada encuentro con eventos en tiempo real, historial de resultados y gráficos de rendimiento.' }
+    { title: 'Ligas y Torneos', desc: 'Crea torneos personalizados con calendarios automáticos, tabla de posiciones y brackets de eliminación directa o doble.' },
+    { title: 'Equipos y Jugadores', desc: 'Administra plantillas completas con dorsal, posición, fotos y estadísticas individuales de cada atleta.' },
+    { title: 'Partidos y Marcadores', desc: 'Registra cada encuentro con eventos en tiempo real, historial de resultados y gráficos de rendimiento.' }
 ];
 
 export function renderLandingView(container, onNavigateToApp) {
@@ -45,13 +45,13 @@ export function renderLandingView(container, onNavigateToApp) {
 
     const mainCta = document.createElement('button');
     mainCta.className = 'btn btn-primary';
-    mainCta.textContent = '⚡ Ir al Dashboard';
+    mainCta.textContent = 'Ir al Dashboard';
     ctaRow.appendChild(mainCta);
 
     const secondaryCta = document.createElement('a');
     secondaryCta.className = 'btn btn-secondary';
     secondaryCta.href = '#leagues';
-    secondaryCta.textContent = '📋 Ver Ligas';
+    secondaryCta.textContent = 'Ver Ligas';
     ctaRow.appendChild(secondaryCta);
 
     heroText.appendChild(ctaRow);
@@ -80,7 +80,6 @@ export function renderLandingView(container, onNavigateToApp) {
     featuresSection.className = 'landing-features';
     featuresSection.innerHTML = FEATURES.map(f => `
         <div class="landing-feature-card glass-card">
-            <div class="landing-feature-icon">${f.icon}</div>
             <h3 class="landing-feature-title">${f.title}</h3>
             <p class="landing-feature-desc">${f.desc}</p>
         </div>
@@ -115,7 +114,7 @@ export function renderLandingView(container, onNavigateToApp) {
 
         // CTA principal contextual
         if (leagues.length === 0) {
-            mainCta.textContent = '⚡ Crear mi primera Liga';
+            mainCta.textContent = 'Crear mi primera Liga';
             mainCta.onclick = () => go('leagues');
         } else {
             mainCta.onclick = () => onNavigateToApp();
@@ -124,7 +123,6 @@ export function renderLandingView(container, onNavigateToApp) {
         if (!league) {
             contentArea.innerHTML = `
                 <div class="landing-empty-state glass-card">
-                    <div class="landing-empty-icon">🏆</div>
                     <h2>Empecemos</h2>
                     <p>Crea tu primera liga para comenzar a administrar equipos, jugadores y partidos.</p>
                     <a href="#leagues" class="btn btn-primary">+ Crear Liga</a>
@@ -204,7 +202,7 @@ function renderLeagueSummary(league, teams, players, matches) {
 
     return `
         <div class="landing-league-header">
-            <div class="landing-league-icon">${sport.icon}</div>
+            <img class="landing-league-logo" src="${sport.logo}" alt="${escapeHTML(sport.name)}">
             <div class="landing-league-info">
                 <h2>${escapeHTML(league.name)}</h2>
                 <div class="landing-league-meta">
@@ -217,22 +215,18 @@ function renderLeagueSummary(league, teams, players, matches) {
 
         <div class="landing-stats-grid">
             <div class="landing-stat-card glass-card">
-                <div class="landing-stat-icon">🏅</div>
                 <div class="landing-stat-num">${teams.length}</div>
                 <div class="landing-stat-label">Equipos</div>
             </div>
             <div class="landing-stat-card glass-card">
-                <div class="landing-stat-icon">🎽</div>
                 <div class="landing-stat-num">${players.length}</div>
                 <div class="landing-stat-label">Jugadores</div>
             </div>
             <div class="landing-stat-card glass-card">
-                <div class="landing-stat-icon">📅</div>
                 <div class="landing-stat-num">${matches.length}</div>
                 <div class="landing-stat-label">Partidos</div>
             </div>
             <div class="landing-stat-card glass-card">
-                <div class="landing-stat-icon">✅</div>
                 <div class="landing-stat-num">${finishedCount}</div>
                 <div class="landing-stat-label">Finalizados</div>
             </div>
@@ -240,11 +234,11 @@ function renderLeagueSummary(league, teams, players, matches) {
 
         <div class="landing-panels">
             <div class="glass-panel landing-panel">
-                <h3 class="landing-panel-title">📅 Próximo Partido</h3>
+                <h3 class="landing-panel-title">Próximo Partido</h3>
                 ${nextMatch ? matchCard(nextMatch) : '<p class="text-muted text-sm">No hay partidos programados todavía.</p>'}
             </div>
             <div class="glass-panel landing-panel">
-                <h3 class="landing-panel-title">🏁 Último Resultado</h3>
+                <h3 class="landing-panel-title">Último Resultado</h3>
                 ${lastMatch ? matchCard(lastMatch) : '<p class="text-muted text-sm">Todavía no se ha jugado ningún partido.</p>'}
             </div>
         </div>
@@ -252,7 +246,7 @@ function renderLeagueSummary(league, teams, players, matches) {
         <div class="landing-lower">
             ${standings.length ? `
             <div class="glass-panel landing-panel">
-                <h3 class="landing-panel-title">🏆 Tabla de Posiciones</h3>
+                <h3 class="landing-panel-title">Tabla de Posiciones</h3>
                 <table class="landing-table">
                     <thead>
                         <tr><th>#</th><th>Equipo</th><th>PJ</th><th>${sport.scoreLabelFor}</th><th>Pts</th></tr>
@@ -271,10 +265,10 @@ function renderLeagueSummary(league, teams, players, matches) {
             </div>` : ''}
             ${topScorers.length ? `
             <div class="glass-panel landing-panel">
-                <h3 class="landing-panel-title">🥇 ${escapeHTML(sport.rankingTitle)}</h3>
+                <h3 class="landing-panel-title">${escapeHTML(sport.rankingTitle)}</h3>
                 ${topScorers.map((p, i) => `
                     <div class="landing-scorer-row">
-                        <span class="landing-scorer-pos">${['🥇', '🥈', '🥉'][i] || (i + 1)}</span>
+                        <span class="landing-scorer-pos">${i + 1}</span>
                         <span class="fw-bold">${escapeHTML(p.name)}</span>
                         <span class="landing-scorer-goals">${p.goals} ${escapeHTML(sport.scoreEventPlural)}</span>
                     </div>`).join('')}
