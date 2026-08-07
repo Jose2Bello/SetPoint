@@ -35,6 +35,14 @@ export async function renderStats(container) {
     }
 
     const sportConfig = getSportConfig(activeLeague.sport);
+
+    // Etiquetas de infracciones según el deporte (dinámicas por sportConfig.infractions)
+    const infractionsConfig = sportConfig.infractions || [];
+    const cleanShort = (s = '') => s.replace(/^\p{Extended_Pictographic}+\s*/u, '');
+    const pluralize = (word) => /[aeiouáéíóú]$/i.test(word) ? word + 's' : word + 'es';
+    const yellowLabel = pluralize(cleanShort(infractionsConfig[0]?.short || 'Amarilla'));
+    const redLabel = pluralize(cleanShort(infractionsConfig[1]?.short || 'Roja'));
+
     const teams = await getTeamsByLeague(activeLeague.id);
     const teamMap = new Map(teams.map(t => [Number(t.id), t]));
     const players = await getAllPlayers(activeLeague.id);
@@ -115,7 +123,7 @@ export async function renderStats(container) {
 
     kpiGrid.appendChild(createKpiCard('Partidos Jugados', `${finishedMatches.length} / ${matches.length}`, 'Completados en el calendario'));
     kpiGrid.appendChild(createKpiCard(`${sportConfig.scoreEventPlural} Totales`, totalGoals, `Promedio de ${avgGoals} por partido`));
-    kpiGrid.appendChild(createKpiCard('Infracciones Totales', `${totalYellows + totalReds}`, `${totalYellows} Amarillas / Faltas · ${totalReds} Rojas`));
+    kpiGrid.appendChild(createKpiCard('Infracciones Totales', `${totalYellows + totalReds}`, `${totalYellows} ${yellowLabel} · ${totalReds} ${redLabel}`));
     kpiGrid.appendChild(createKpiCard('Atletas Registrados', players.length, 'Plantel total de la liga'));
     
     container.appendChild(kpiGrid);
@@ -163,23 +171,19 @@ export async function renderStats(container) {
     // Infractions / Fair Play Card
     const infractionsCard = document.createElement('div');
     infractionsCard.className = 'dashboard-card col-span-6';
-    const infLabels = sportConfig.infractions || [
-        { short: 'Amarilla' },
-        { short: 'Roja' }
-    ];
     infractionsCard.innerHTML = `
         <div class="dashboard-card-title">
-            <span>Leaderboard de Infracciones y Tarjetas</span>
+            <span>Leaderboard de Infracciones (${yellowLabel} y ${redLabel})</span>
         </div>
-        ${infractions.length === 0 ? `<p class="text-muted text-sm" style="padding:1rem 0;">¡Excelente Juego Limpio! No hay tarjetas ni infracciones registradas.</p>` : `
+        ${infractions.length === 0 ? `<p class="text-muted text-sm" style="padding:1rem 0;">¡Excelente Juego Limpio! No hay ${yellowLabel.toLowerCase()} ni ${redLabel.toLowerCase()} registradas.</p>` : `
             <table class="dashboard-table">
                 <thead>
                     <tr>
                         <th>#</th>
                         <th>Jugador</th>
                         <th>Equipo</th>
-                        <th>Amarillas/Faltas</th>
-                        <th>Rojas/Técnicas</th>
+                        <th>${yellowLabel}</th>
+                        <th>${redLabel}</th>
                     </tr>
                 </thead>
                 <tbody>
