@@ -1,5 +1,5 @@
 /* Service Worker: SetPoint PWA */
-const CACHE_NAME = 'setpoint-v7';
+const CACHE_NAME = 'setpoint-v12';
 const APP_SHELL = [
     './',
     './index.html',

@@ -94,7 +94,7 @@ SetPoint/
 │   │   └── player-card.js         # <player-card> (foto + dorsal)
 │   ├── views/
 │   │   ├── dashboard.view.js      # V-01  #dashboard
-│   │   ├── leagues.view.js        # V-02  #leagues + #league/:id (bracket)
+│   │   ├── leagues.view.js        # V-02  #leagues + #league/:id (bracket + fixture)
 │   │   ├── teams.view.js          # V-03  #teams
 │   │   ├── team-detail.view.js    # V-04  #team/:id (pizarra táctica)
 │   │   ├── players.view.js        # V-05  #players
@@ -306,7 +306,7 @@ Además de las funciones nombradas, el archivo exporta `revertMatch` (alias de `
 | Vista | Ruta | Qué muestra |
 |---|---|---|
 | `dashboard.view.js` | `#dashboard` | Cabecera de liga activa, próximo partido, último resultado, mini tabla (top 5) o resumen de bracket, y **3 gráficos Chart.js**: barras (PF), doughnut (V/E/D), línea (evolución de PF). |
-| `leagues.view.js` | `#leagues` + `#league/:id` | Listado de ligas (crear/editar/eliminar/activar/exportar/importar JSON) y detalle con tabs: **Bracket** (árbol horizontal con conectores SVG, tarjetas editables por admin), **Inscripciones** (alta de equipos), **Partidos**. |
+| `leagues.view.js` | `#leagues` + `#league/:id` | Listado de ligas (crear/editar/eliminar/activar/exportar/importar JSON) y detalle con tabs: **Bracket** (árbol horizontal con conectores SVG, tarjetas editables por admin), **Inscripciones** (alta de equipos), **Partidos**. En modalidad **Liga** incluye el botón **"Generar Fixture"** (round-robin 1 o 2 vueltas vía `fixtureService` + `transactions.saveMatchesList`, con confirmación para reemplazar partidos existentes). |
 | `teams.view.js` | `#teams` | Galería de equipos con escudo, nº jugadores y posición; formulario crear/editar (nombre, escudo, colores, ciudad). |
 | `team-detail.view.js` | `#team/:id` | Cabecera con estadísticas (Partidos Jugados/Ganados/Empatados/Perdidos, Goles/Puntos a Favor y en Contra, Diferencia, Puntos), **pizarra táctica** (campo horizontal, formaciones, arrastre de jugadores, banquillo), próximos partidos, historial con resultado V/E/D y mini gráfico de evolución de puntos. |
 | `players.view.js` | `#players` | Búsqueda con debounce, filtros por equipo/posición, galería de tarjetas; modal crear/editar jugador (foto, dorsal, posición, equipo). Exporta `openPlayerModal` y `setupPlayerModal`. |

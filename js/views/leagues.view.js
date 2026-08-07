@@ -5,6 +5,7 @@ import { matchesDb } from '../db/matches.db.js';
 import { eventsDb, getEventsByMatch } from '../db/events.db.js';
 import { transactions } from '../db/transactions.js';
 import { bracketService } from '../services/bracket.service.js';
+import { fixtureService } from '../services/fixture.service.js';
 import { storage } from '../utils/storage.js';
 import { getSportConfig } from '../sports-terms.js';
 import { confirmAction } from '../components/confirm-dialog.js';
@@ -248,7 +249,10 @@ async function renderEntriesTab(container, league, enrolledTeams, refreshTab) {
                         Total: <strong>${enrolledTeams.length}</strong> / ${league.bracketTeamsCount ? league.bracketTeamsCount + ' requeridos para el cuadro' : 'sin límite'}
                     </p>
                 </div>
-                <button id="btnEnrollTeam" class="btn btn-primary text-sm">+ Inscribir Nuevo Equipo</button>
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                    ${league.mode === 'liga' ? `<button id="btnGenerateFixtureEntries" class="btn btn-secondary text-sm">Generar Fixture</button>` : ''}
+                    <button id="btnEnrollTeam" class="btn btn-primary text-sm">+ Inscribir Nuevo Equipo</button>
+                </div>
             </div>
 
             ${enrolledTeams.length === 0 ? `
@@ -286,6 +290,67 @@ async function renderEntriesTab(container, league, enrolledTeams, refreshTab) {
         const enrolledIds = new Set(enrolledTeams.map(t => Number(t.id)));
         showEnrollTeamModal(league.id, league.sport, enrolledIds, refreshTab);
     });
+
+    container.querySelector('#btnGenerateFixtureEntries')?.addEventListener('click', () => {
+        handleGenerateFixture(league, refreshTab);
+    });
+}
+
+/**
+ * Genera el fixture round-robin (todos contra todos) de una liga regular.
+ * Si ya existen partidos, pide confirmación y los reemplaza.
+ * @param {object} league 
+ * @param {Function} refresh 
+ */
+async function handleGenerateFixture(league, refresh) {
+    if (league.mode !== 'liga') return;
+
+    const teams = await teamsDb.getByLeague(league.id);
+    if (teams.length < 2) {
+        toast.error('Inscribe al menos 2 equipos para generar el fixture.');
+        return;
+    }
+
+    const doubleRound = Number(league.rounds) === 2;
+    const existing = await matchesDb.getByLeague(league.id);
+
+    if (existing.length) {
+        const confirmed = await confirmAction(
+            'Reemplazar fixture',
+            `La liga ya tiene ${existing.length} partido(s). Se eliminarán todos y se generará un nuevo calendario (${doubleRound ? 'ida y vuelta' : 'vuelta única'}). ¿Continuar?`,
+            { confirmText: 'Sí, regenerar' }
+        );
+        if (!confirmed) return;
+    }
+
+    try {
+        for (const m of existing) {
+            const evs = await getEventsByMatch(m.id);
+            for (const ev of evs) await eventsDb.delete(ev.id);
+            await matchesDb.delete(m.id);
+        }
+
+        const generated = fixtureService.generateFixture(
+            league.id,
+            teams.map(t => Number(t.id)),
+            doubleRound,
+            null
+        );
+
+        if (!generated.length) {
+            toast.error('No se pudo generar el fixture.');
+            return;
+        }
+
+        await transactions.saveMatchesList(generated);
+
+        const jornadas = new Set(generated.map(g => g.round)).size;
+        toast.success(`Fixture generado: ${generated.length} partidos en ${jornadas} jornada(s).`);
+        refresh();
+    } catch (err) {
+        console.error('Error al generar el fixture:', err);
+        toast.error('Error al generar el fixture: ' + (err.message || 'desconocido'));
+    }
 }
 
 /**
@@ -306,11 +371,14 @@ function renderLeagueMatchesTab(container, league, teams, matches, refreshTab) {
         <div class="glass-panel" style="padding: 1.5rem; border-radius: 14px; background: var(--color-bg-card);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
                 <h3 style="margin: 0; color: var(--color-text-primary);">📅 Calendario de Partidos</h3>
-                <button id="btnAddLeagueMatch" class="btn btn-primary btn-sm">+ Programar Partido</button>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    ${league.mode === 'liga' ? `<button id="btnGenerateFixture" class="btn btn-secondary btn-sm">Generar Fixture</button>` : ''}
+                    <button id="btnAddLeagueMatch" class="btn btn-primary btn-sm">+ Programar Partido</button>
+                </div>
             </div>
 
             ${matches.length === 0 ? `
-                <p class="text-muted" style="text-align: center; padding: 2rem;">No hay partidos programados aún. ¡Agrega el primer partido!</p>
+                <p class="text-muted" style="text-align: center; padding: 2rem;">No hay partidos programados aún. Usa "Generar Fixture" para crear automáticamente el calendario del todos contra todos, o agrégalos manualmente.</p>
             ` : Object.entries(grouped).map(([groupTitle, groupMatches]) => `
                 <div style="margin-bottom: 1.5rem;">
                     <div style="font-size: 0.78rem; font-weight: 700; color: #60a5fa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem; padding-bottom: 0.35rem; border-bottom: 1px solid rgba(96,165,250,0.25);">${groupTitle}</div>
@@ -352,6 +420,10 @@ function renderLeagueMatchesTab(container, league, teams, matches, refreshTab) {
 
     container.querySelector('#btnAddLeagueMatch')?.addEventListener('click', () => {
         showAddMatchModal(league.id, teams, refreshTab);
+    });
+
+    container.querySelector('#btnGenerateFixture')?.addEventListener('click', () => {
+        handleGenerateFixture(league, refreshTab);
     });
 }
 
@@ -901,6 +973,7 @@ function renderFormView(container, leagueToEdit = null) {
                                 <option value="1">1 Vuelta</option>
                                 <option value="2">2 Vueltas (Ida y Vuelta)</option>
                             </select>
+                            <small class="text-xs text-muted">El fixture se genera con el botón "Generar Fixture" desde la liga, una vez inscritos los equipos.</small>
                         </div>
                     ` : ''}
 
@@ -938,6 +1011,7 @@ function renderFormView(container, leagueToEdit = null) {
                     <option value="1">1 Vuelta</option>
                     <option value="2">2 Vueltas (Ida y Vuelta)</option>
                 </select>
+                <small class="text-xs text-muted">El fixture se genera con el botón "Generar Fixture" desde la liga, una vez inscritos los equipos.</small>
             `;
         }
     });

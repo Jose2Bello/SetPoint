@@ -3,15 +3,17 @@ import { getAllLeagues, getActiveLeague, getLeagueById } from '../db/leagues.db.
 import { getTeamsByLeague } from '../db/teams.db.js';
 import { getAllPlayers } from '../db/players.db.js';
 import { getAllMatches } from '../db/matches.db.js';
-import { getSportConfig, SPORTS } from '../sports-terms.js';
+import { getSportConfig } from '../sports-terms.js';
 import { standingsService } from '../services/standings.service.js';
 import { storage } from '../utils/storage.js';
 import { escapeHTML } from '../utils/dom.js';
 
-const FEATURES = [
-    { title: 'Ligas y Torneos', desc: 'Crea torneos personalizados con calendarios automáticos, tabla de posiciones y brackets de eliminación directa o doble.' },
-    { title: 'Equipos y Jugadores', desc: 'Administra plantillas completas con dorsal, posición, fotos y estadísticas individuales de cada atleta.' },
-    { title: 'Partidos y Marcadores', desc: 'Registra cada encuentro con eventos en tiempo real, historial de resultados y gráficos de rendimiento.' }
+const STEPS = [
+    { title: 'Crea tu liga', desc: 'Elige deporte, modalidad y vueltas. Todo lo que crees después pertenece a esa liga.' },
+    { title: 'Inscribe los equipos', desc: 'Los equipos no son globales: cada liga tiene los suyos. Entra a tu liga y usa "+ Inscribir Nuevo Equipo".' },
+    { title: 'Genera el calendario', desc: 'Usa "Generar Fixture" para el todos contra todos, o programa partidos a mano.' },
+    { title: 'Registra los resultados', desc: 'Finaliza cada partido y las posiciones se actualizan solas.' },
+    { title: 'Revisa las estadísticas', desc: 'Tabla de posiciones, anotadores y juego limpio.' }
 ];
 
 export function renderLandingView(container, onNavigateToApp) {
@@ -57,16 +59,6 @@ export function renderLandingView(container, onNavigateToApp) {
     heroText.appendChild(ctaRow);
     hero.appendChild(heroText);
 
-    const heroBadge = document.createElement('div');
-    heroBadge.className = 'landing-hero-badge';
-    heroBadge.innerHTML = Object.values(SPORTS).map(s => `
-        <div class="landing-sport-pill">
-            <img src="${s.logo}" alt="${s.name}">
-            <span>${s.name}</span>
-        </div>
-    `).join('');
-    hero.appendChild(heroBadge);
-
     wrapper.appendChild(hero);
 
     // ---------- Zona dinámica (datos de IndexedDB) ----------
@@ -75,16 +67,23 @@ export function renderLandingView(container, onNavigateToApp) {
     contentArea.innerHTML = '<div class="landing-loading">Cargando datos…</div>';
     wrapper.appendChild(contentArea);
 
-    // ---------- Características ----------
-    const featuresSection = document.createElement('section');
-    featuresSection.className = 'landing-features';
-    featuresSection.innerHTML = FEATURES.map(f => `
-        <div class="landing-feature-card glass-card">
-            <h3 class="landing-feature-title">${f.title}</h3>
-            <p class="landing-feature-desc">${f.desc}</p>
+    // ---------- Paso a paso ----------
+    const stepsSection = document.createElement('section');
+    stepsSection.className = 'landing-steps';
+    stepsSection.innerHTML = `
+        <h2 class="landing-steps-title">¿Cómo funciona?</h2>
+        <p class="landing-steps-subtitle">Así se usa la página, de principio a fin.</p>
+        <div class="landing-steps-grid">
+            ${STEPS.map((s, i) => `
+                <div class="landing-step glass-card">
+                    <span class="landing-step-num">${i + 1}</span>
+                    <h3 class="landing-step-title">${s.title}</h3>
+                    <p class="landing-step-desc">${s.desc}</p>
+                </div>
+            `).join('')}
         </div>
-    `).join('');
-    wrapper.appendChild(featuresSection);
+    `;
+    wrapper.appendChild(stepsSection);
 
     // ---------- Lógica de datos ----------
     (async () => {
