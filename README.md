@@ -102,6 +102,7 @@ SetPoint/
 │   │   ├── match-card.js          # <match-card>
 │   │   └── player-card.js         # <player-card> (foto + dorsal)
 │   ├── views/
+│   │   ├── landing.view.js        # V-00  #landing (página de inicio)
 │   │   ├── dashboard.view.js      # V-01  #dashboard
 │   │   ├── leagues.view.js        # V-02  #leagues + #league/:id (bracket)
 │   │   ├── teams.view.js          # V-03  #teams
@@ -110,7 +111,8 @@ SetPoint/
 │   │   ├── player-detail.view.js  # V-06  #player/:id
 │   │   ├── matches.view.js        # V-07  #matches
 │   │   ├── match-detail.view.js   # V-08  #match/:id
-│   │   └── stats-view.js          # V-09  #stats
+│   │   ├── stats-view.js          # V-09  #stats
+│   │   └── bracket.view.js        # V-10  #bracket/:id
 │   └── utils/
 │       ├── dom.js                 # $, $$, createElement, escapeHTML
 │       ├── date.js                # formatDate, formatDateShort, formatDateTimeLocal
@@ -311,7 +313,7 @@ Además de las funciones nombradas, el archivo exporta `revertMatch` (alias de `
 ## 8. Router — `js/router.js`
 
 - Escucha `hashchange` y renderiza en `#app` según la ruta.
-- Rutas: `dashboard`, `leagues`, `league/:id`, `teams`, `team/:id`, `matches`, `match/:id`, `match-detail/:id` (alias), `players`, `player/:id`, `stats`.
+- Rutas: `landing`, `dashboard`, `leagues`, `league/:id`, `teams`, `team/:id`, `matches`, `match/:id`, `match-detail/:id` (alias), `players`, `player/:id`, `stats`, `bracket/:id`.
 - Muestra `<loading-state>` durante la carga, maneja errores por vista (tarjeta con botón recargar) y 404.
 - `router.navigate(hash)` navega programáticamente. Tras renderizar resalta el enlace activo del navbar.
 
@@ -319,14 +321,15 @@ Además de las funciones nombradas, el archivo exporta `revertMatch` (alias de `
 
 | Vista | Ruta | Qué muestra |
 |---|---|---|
+| `landing.view.js` | `#landing` | Pantalla de bienvenida. Sección **Hero** con título, subtítulo y CTAs contextuales (si no hay ligas → "Crear mi primera Liga"; si ya existen → "Ir al Dashboard"). Bloque **¿Cómo funciona?** con los 5 pasos de uso. Zona dinámica con el **resumen de la liga activa**: cuatro KPIs (equipos, jugadores, partidos, finalizados), panel de próximo partido y último resultado, tabla de posiciones (top 5, solo modo liga) y ranking de anotadores. Si no hay ninguna liga creada, muestra un estado vacío con botón de creación. |
 | `dashboard.view.js` | `#dashboard` | Cabecera de liga activa, próximo partido, último resultado, mini tabla (top 5) o resumen de bracket, y **3 gráficos Chart.js**: barras (PF), doughnut (V/E/D), línea (evolución de PF). |
 | `leagues.view.js` | `#leagues` + `#league/:id` | Listado de ligas (crear/editar/eliminar/activar/exportar/importar JSON) y detalle con tabs: **Bracket** (árbol horizontal con conectores SVG, tarjetas editables por admin), **Inscripciones** (alta de equipos), **Partidos**. |
 | `teams.view.js` | `#teams` | Galería de equipos con escudo, nº jugadores y posición; formulario crear/editar (nombre, escudo, colores, ciudad). |
-| `team-detail.view.js` | `#team/:id` | Cabecera con estadísticas (Partidos Jugados/Ganados/Empatados/Perdidos, Goles/Puntos a Favor y en Contra, Diferencia, Puntos), **pizarra táctica** (campo horizontal, formaciones, arrastre de jugadores, banquillo), próximos partidos, historial con resultado V/E/D y mini gráfico de evolución de puntos. |
+| `team-detail.view.js` | `#team/:id` | Cabecera con estadísticas calculadas en tiempo real desde los partidos finalizados (Jugados/Ganados/Empatados/Perdidos, Goles/Puntos a Favor y en Contra, Diferencia, Puntos, Posición en la tabla), **pizarra táctica** (campo horizontal, formaciones, arrastre de jugadores, banquillo), próximos partidos, historial con resultado V/E/D y mini gráfico de evolución de puntos. |
 | `players.view.js` | `#players` | Búsqueda con debounce, filtros por equipo/posición, galería de tarjetas; modal crear/editar jugador (foto, dorsal, posición, equipo). Exporta `openPlayerModal` y `setupPlayerModal`. |
 | `player-detail.view.js` | `#player/:id` | Cabecera con foto/número/posición/equipo, estadísticas, historial de partidos con anotaciones y mini gráfico de barras. |
 | `matches.view.js` | `#matches` | Filtros por estado/equipo/fecha, listado ordenado por fecha, modal crear/editar partido y registro rápido de eventos. |
-| `match-detail.view.js` | `#match/:id` | Cabecera de partido, registro de eventos (anotación o infracción) por equipo, lista de eventos, botones **Finalizar** (con declaración de ganador en brackets si hay empate) y **Deshacer**, y botón de cambio de estado. |
+| `match-detail.view.js` | `#match/:id` | Cabecera de partido con marcador, registro de eventos (anotación o infracción) por equipo y jugador, lista de eventos con opción de eliminar, botones **Finalizar** (con declaración de ganador en brackets si hay empate), **Deshacer**, **Cambiar Estado** y **🔄 Cambiar Equipos** (solo partidos no finalizados). |
 | `stats-view.js` | `#stats` | Tabla de posiciones (liga) o bracket (eliminación), ranking de anotadores, ranking Fair Play (amarillas/rojas), KPI de infracciones y gráficos comparativos. |
 
 ## 10. Componentes — `js/components/`

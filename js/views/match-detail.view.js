@@ -1,5 +1,5 @@
 import { getMatchById, updateMatch } from '../db/matches.db.js';
-import { getTeamById } from '../db/teams.db.js';
+import { getTeamById, getTeamsByLeague } from '../db/teams.db.js';
 import { getPlayersByTeam } from '../db/players.db.js';
 import { getEventsByMatch, createMatchEvent, deleteMatchEvent } from '../db/events.db.js';
 import { getActiveLeague } from '../db/leagues.db.js';
@@ -31,6 +31,7 @@ export async function renderMatchDetail(container, params) {
 
     const activeLeague = await getActiveLeague();
     const sportConfig = SPORTS[activeLeague?.sport] || SPORTS.futbol;
+    const leagueTeams = activeLeague ? await getTeamsByLeague(activeLeague.id) : [];
     const homeTeam = match.homeTeamId ? await getTeamById(match.homeTeamId) : null;
     const awayTeam = match.awayTeamId ? await getTeamById(match.awayTeamId) : null;
     const homePlayers = match.homeTeamId ? await getPlayersByTeam(match.homeTeamId) : [];
@@ -194,6 +195,54 @@ export async function renderMatchDetail(container, params) {
         }
     });
     scoreDiv.appendChild(btnChangeStatus);
+
+    // Botón Cambiar Equipos — solo disponible si el partido no está finalizado
+    if (!isFinished) {
+        const btnChangeTeams = document.createElement('button');
+        btnChangeTeams.className = 'btn btn-sm btn-secondary';
+        btnChangeTeams.textContent = '🔄 Cambiar Equipos';
+        btnChangeTeams.addEventListener('click', async () => {
+            if (leagueTeams.length < 2) {
+                toast.warning('No hay suficientes equipos en la liga para cambiar.');
+                return;
+            }
+
+            const teamChoices = leagueTeams.map(t => ({ value: t.id, label: t.name }));
+
+            // Paso 1: elegir equipo local
+            const pickHome = await confirmAction(
+                'Cambiar Equipo Local',
+                'Selecciona el nuevo equipo que jugará como local:',
+                { confirmText: 'Siguiente', choices: teamChoices }
+            );
+            if (!pickHome || !pickHome.confirmed) return;
+
+            const newHomeId = Number(pickHome.value);
+
+            // Paso 2: elegir equipo visitante (excluir el local ya elegido)
+            const awayChoices = leagueTeams
+                .filter(t => Number(t.id) !== newHomeId)
+                .map(t => ({ value: t.id, label: t.name }));
+
+            const pickAway = await confirmAction(
+                'Cambiar Equipo Visitante',
+                'Selecciona el nuevo equipo que jugará como visitante:',
+                { confirmText: 'Guardar Cambios', choices: awayChoices }
+            );
+            if (!pickAway || !pickAway.confirmed) return;
+
+            const newAwayId = Number(pickAway.value);
+
+            try {
+                await updateMatch(matchId, { homeTeamId: newHomeId, awayTeamId: newAwayId });
+                toast.success('Equipos actualizados correctamente.');
+                await renderMatchDetail(container, params);
+            } catch (err) {
+                toast.error('Error al actualizar los equipos: ' + err.message);
+            }
+        });
+        scoreDiv.appendChild(btnChangeTeams);
+    }
 
     const metaParts = [];
     if (match.round) metaParts.push(`Ronda: ${match.round}`);
