@@ -1,0 +1,379 @@
+/* css/views/landing.css */
+
+.landing-wrapper {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* ---------- Hero ---------- */
+.landing-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2rem;
+    padding: 2.5rem;
+    border-radius: var(--border-radius-lg);
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.92));
+    border: 1px solid var(--color-border);
+    flex-wrap: wrap;
+}
+
+.landing-hero-text {
+    flex: 1;
+    min-width: 280px;
+}
+
+.landing-hero-title {
+    font-size: 2.25rem;
+    font-weight: 800;
+    margin: 0 0 0.75rem;
+    color: var(--color-text-primary);
+}
+
+.landing-brand {
+    color: var(--color-accent);
+}
+
+.landing-hero-subtitle {
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+    line-height: 1.55;
+    margin: 0 0 1.5rem;
+    max-width: 560px;
+}
+
+.landing-cta-row {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.landing-cta-row .btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.landing-hero-badge {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-width: 190px;
+}
+
+.landing-sport-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.55rem 0.9rem;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    color: var(--color-text-primary);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.landing-sport-pill img {
+    height: 32px;
+    width: auto;
+    max-width: 150px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+/* ---------- Zona dinámica ---------- */
+.landing-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.landing-loading {
+    text-align: center;
+    padding: 2rem 0;
+    color: var(--color-text-muted);
+}
+
+.landing-empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-gradient);
+}
+
+.landing-empty-state h2 {
+    margin: 0 0 0.5rem;
+    color: var(--color-text-primary);
+    font-size: 1.4rem;
+    font-weight: 800;
+}
+
+/* ---------- Logo de liga ---------- */
+.landing-league-logo {
+    height: 48px;
+    width: auto;
+    max-width: 160px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.landing-empty-state p {
+    margin: 0 auto 1.25rem;
+    max-width: 440px;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+}
+
+/* ---------- Cabecera de liga ---------- */
+.landing-league-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.landing-league-info h2 {
+    margin: 0 0 0.4rem;
+    color: var(--color-text-primary);
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+
+.landing-league-meta {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* ---------- Stats ---------- */
+.landing-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.landing-stat-card {
+    text-align: center;
+    padding: 1.2rem 1rem;
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--color-border);
+}
+
+.landing-stat-num {
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: var(--color-text-primary);
+    line-height: 1.2;
+}
+
+.landing-stat-label {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin-top: 0.2rem;
+}
+
+/* ---------- Paneles ---------- */
+.landing-panels {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.25rem;
+}
+
+.landing-panel {
+    padding: 1.25rem;
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--color-border);
+}
+
+.landing-panel-title {
+    margin: 0 0 0.9rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.landing-lower {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.25rem;
+}
+
+/* ---------- Partidos (próximo / último) ---------- */
+.landing-match-row {
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-bg-input);
+    cursor: pointer;
+    transition: border-color var(--transition-fast);
+    margin-bottom: 0.5rem;
+}
+
+.landing-match-row:last-child {
+    margin-bottom: 0;
+}
+
+.landing-match-row:hover {
+    border-color: var(--color-accent);
+}
+
+.landing-match-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.landing-match-teams {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    color: var(--color-text-primary);
+    min-width: 0;
+}
+
+.landing-match-sep {
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+}
+
+.landing-match-score {
+    font-weight: 800;
+    color: var(--color-accent);
+    white-space: nowrap;
+}
+
+.landing-match-vs {
+    color: var(--color-text-muted);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.landing-match-meta {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    margin-top: 0.35rem;
+}
+
+/* ---------- Tabla ---------- */
+.landing-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.landing-table th {
+    text-align: left;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.landing-table td {
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+}
+
+.landing-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.landing-table tbody tr:hover {
+    background: var(--color-row-hover);
+}
+
+.landing-pts {
+    font-weight: 800;
+    color: var(--color-accent);
+}
+
+/* ---------- Goleadores ---------- */
+.landing-scorer-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+}
+
+.landing-scorer-row:last-child {
+    border-bottom: none;
+}
+
+.landing-scorer-pos {
+    width: 26px;
+    text-align: center;
+}
+
+.landing-scorer-goals {
+    margin-left: auto;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+/* ---------- Características ---------- */
+.landing-features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.25rem;
+}
+
+.landing-feature-card {
+    padding: 1.4rem;
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.landing-feature-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.landing-feature-desc {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    line-height: 1.45;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 720px) {
+    .landing-hero {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 1.75rem;
+    }
+
+    .landing-hero-badge {
+        flex-direction: row;
+        flex-wrap: wrap;
+        min-width: 0;
+    }
+
+    .landing-hero-title {
+        font-size: 1.75rem;
+    }
+}
