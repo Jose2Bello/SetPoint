@@ -167,6 +167,8 @@ export function finalizeMatch(matchId, eventsList, manualWinnerId = null) {
             });
             
             match.score = { home: homeScore, away: awayScore };
+            match.homeScore = homeScore;
+            match.awayScore = awayScore;
             match.status = 'Finalizado';
             
             let winnerTeamId = null;

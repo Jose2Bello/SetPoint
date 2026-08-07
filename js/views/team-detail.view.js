@@ -56,6 +56,24 @@ export async function renderTeamDetail(container, params) {
         .filter(m => m.status === 'finished' || m.status === 'Finalizado')
         .sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt));
 
+    // Cálculo de estadísticas del equipo en tiempo real desde los partidos finalizados
+    const liveStats = {
+        played: 0, won: 0, drawn: 0, lost: 0,
+        goalsFor: 0, goalsAgainst: 0, goalsDiff: 0, points: 0
+    };
+    finishedMatches.forEach(m => {
+        const isHome = Number(m.homeTeamId) === teamId;
+        const myScore  = isHome ? (m.homeScore ?? m.score?.home ?? 0) : (m.awayScore ?? m.score?.away ?? 0);
+        const rivScore = isHome ? (m.awayScore ?? m.score?.away ?? 0) : (m.homeScore ?? m.score?.home ?? 0);
+        liveStats.played++;
+        liveStats.goalsFor      += myScore;
+        liveStats.goalsAgainst  += rivScore;
+        if (myScore > rivScore)       { liveStats.won++;   liveStats.points += 3; }
+        else if (myScore < rivScore)  { liveStats.lost++;  }
+        else                          { liveStats.drawn++; liveStats.points += 1; }
+    });
+    liveStats.goalsDiff = liveStats.goalsFor - liveStats.goalsAgainst;
+
     // Cálculo de posición en la tabla de la liga
     let currentRank = '-';
     if (activeLeague) {
@@ -165,8 +183,7 @@ export async function renderTeamDetail(container, params) {
     mainInfo.appendChild(titleDetails);
     headerPanel.appendChild(mainInfo);
 
-    // Estadísticas Resumidas
-    const stats = team.stats || {};
+    // Estadísticas Resumidas — calculadas en tiempo real desde los partidos finalizados
     const statsGrid = document.createElement('div');
     statsGrid.className = 'team-stats-summary-grid';
 
@@ -185,15 +202,16 @@ export async function renderTeamDetail(container, params) {
     };
 
     const scoreWord = sportKey === 'futbol' ? 'Goles' : 'Puntos';
+    const diffDisplay = liveStats.goalsDiff > 0 ? `+${liveStats.goalsDiff}` : liveStats.goalsDiff;
     statsGrid.appendChild(createStatItem('Posición', currentRank, true));
-    statsGrid.appendChild(createStatItem('Puntos', stats.points, true));
-    statsGrid.appendChild(createStatItem('Partidos Jugados', stats.played));
-    statsGrid.appendChild(createStatItem('Partidos Ganados', stats.won));
-    statsGrid.appendChild(createStatItem('Partidos Empatados', stats.drawn));
-    statsGrid.appendChild(createStatItem('Partidos Perdidos', stats.lost));
-    statsGrid.appendChild(createStatItem(`${scoreWord} a Favor`, stats.goalsFor));
-    statsGrid.appendChild(createStatItem(`${scoreWord} en Contra`, stats.goalsAgainst));
-    statsGrid.appendChild(createStatItem('Diferencia', (stats.goalsDiff > 0 ? `+${stats.goalsDiff}` : stats.goalsDiff) || 0));
+    statsGrid.appendChild(createStatItem('Puntos', liveStats.points, true));
+    statsGrid.appendChild(createStatItem('Partidos Jugados', liveStats.played));
+    statsGrid.appendChild(createStatItem('Partidos Ganados', liveStats.won));
+    statsGrid.appendChild(createStatItem('Partidos Empatados', liveStats.drawn));
+    statsGrid.appendChild(createStatItem('Partidos Perdidos', liveStats.lost));
+    statsGrid.appendChild(createStatItem(`${scoreWord} a Favor`, liveStats.goalsFor));
+    statsGrid.appendChild(createStatItem(`${scoreWord} en Contra`, liveStats.goalsAgainst));
+    statsGrid.appendChild(createStatItem('Diferencia', diffDisplay));
 
     headerPanel.appendChild(statsGrid);
     container.appendChild(headerPanel);
@@ -356,8 +374,10 @@ export async function renderTeamDetail(container, params) {
 
         finishedMatches.forEach(m => {
             const isHome = Number(m.homeTeamId) === teamId;
-            const myScore = isHome ? (m.homeScore ?? 0) : (m.awayScore ?? 0);
-            const rivalScore = isHome ? (m.awayScore ?? 0) : (m.homeScore ?? 0);
+            const rawHome = m.homeScore ?? m.score?.home ?? 0;
+            const rawAway = m.awayScore ?? m.score?.away ?? 0;
+            const myScore    = isHome ? rawHome : rawAway;
+            const rivalScore = isHome ? rawAway : rawHome;
             const rivalId = isHome ? m.awayTeamId : m.homeTeamId;
 
             let resultBadge = { text: 'E', class: 'badge-draw' };
@@ -378,7 +398,7 @@ export async function renderTeamDetail(container, params) {
                 </div>
                 <div class="match-versus">
                     <span class="${isHome ? 'fw-bold' : ''}">${isHome ? team.name : rivalName}</span>
-                    <span class="match-score-pill">${m.homeScore ?? 0} - ${m.awayScore ?? 0}</span>
+                    <span class="match-score-pill">${rawHome} - ${rawAway}</span>
                     <span class="${!isHome ? 'fw-bold' : ''}">${!isHome ? team.name : rivalName}</span>
                 </div>
             `;

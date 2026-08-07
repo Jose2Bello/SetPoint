@@ -98,6 +98,7 @@ export function updateTeam(id, teamUpdate) {
             if (teamUpdate.formation !== undefined) data.formation = teamUpdate.formation;
             if (teamUpdate.discipline !== undefined) data.discipline = teamUpdate.discipline;
             if (teamUpdate.sport !== undefined) data.sport = teamUpdate.sport;
+            if (teamUpdate.stats !== undefined) data.stats = { ...(data.stats || {}), ...teamUpdate.stats };
             
             const putReq = store.put(data);
             putReq.onsuccess = () => resolve();
