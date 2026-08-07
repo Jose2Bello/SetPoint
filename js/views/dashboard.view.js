@@ -141,24 +141,44 @@ export async function renderDashboard(container) {
                 <!-- Gráfico 2: Resultados Globales -->
                 <div class="dashboard-card col-span-4">
                     <div class="dashboard-card-title">Distribución de Resultados</div>
-                    <div class="chart-wrapper">
-                        <canvas id="chartResults"></canvas>
-                    </div>
+                    ${completedMatches === 0
+                        ? `<p class="text-muted text-sm" style="padding:1rem 0;">No hay datos suficientes: aún no hay partidos finalizados.</p>`
+                        : `<div class="chart-wrapper"><canvas id="chartResults"></canvas></div>`
+                    }
                 </div>
 
-                <!-- Gráfico 3: Puntos Acumulados -->
+                <!-- Gráfico 3: Evolución de Anotaciones por Fecha -->
                 <div class="dashboard-card col-span-4">
-                    <div class="dashboard-card-title">Evolución de Puntos</div>
-                    <div class="chart-wrapper">
-                        <canvas id="chartTimeline"></canvas>
-                    </div>
+                    <div class="dashboard-card-title">${sportTerm.icon} Evolución de ${sportTerm.scoreEventPlural || 'Anotaciones'}</div>
+                    ${completedMatches === 0
+                        ? `<p class="text-muted text-sm" style="padding:1rem 0;">No hay datos suficientes: aún no hay partidos finalizados.</p>`
+                        : `<div class="chart-wrapper"><canvas id="chartTimeline"></canvas></div>`
+                    }
+                </div>
+
+                <!-- Gráfico 4: Evolución de Puntos por Equipo (multi-serie) -->
+                <div class="dashboard-card col-span-6">
+                    <div class="dashboard-card-title">Evolución de Puntos por Equipo</div>
+                    ${completedMatches === 0
+                        ? `<p class="text-muted text-sm" style="padding:1rem 0;">No hay datos suficientes: aún no hay partidos finalizados.</p>`
+                        : `<div class="chart-wrapper"><canvas id="chartTeamEvolution"></canvas></div>`
+                    }
+                </div>
+
+                <!-- Gráfico 5: Anotaciones por Ronda -->
+                <div class="dashboard-card col-span-6">
+                    <div class="dashboard-card-title">${sportTerm.scoreEventPlural || 'Anotaciones'} por Ronda</div>
+                    ${completedMatches === 0
+                        ? `<p class="text-muted text-sm" style="padding:1rem 0;">No hay datos suficientes: aún no hay partidos finalizados.</p>`
+                        : `<div class="chart-wrapper"><canvas id="chartRoundBars"></canvas></div>`
+                    }
                 </div>
             </div>
         </div>
     `;
 
     // 2. Inicializar Gráficos con Chart.js
-    initCharts(standings, matches, sportTerm, topScorers);
+    initCharts(standings, matches, sportTerm, topScorers, teams);
 }
 
 function renderEmptyState(container, message) {
@@ -392,7 +412,7 @@ function renderBracketStandings(standings) {
     `;
 }
 
-function initCharts(standings, matches, sportTerm, topScorers) {
+function initCharts(standings, matches, sportTerm, topScorers, teams) {
     if (typeof Chart === 'undefined') {
         console.warn('Chart.js no está cargado');
         return;
@@ -401,11 +421,17 @@ function initCharts(standings, matches, sportTerm, topScorers) {
     const bodyStyles = getComputedStyle(document.body);
     const accentHex = (bodyStyles.getPropertyValue('--color-accent') || '#3b82f6').trim();
     const accentRgb = (bodyStyles.getPropertyValue('--color-accent-rgb') || '59, 130, 246').trim();
-
-    const labels = standings.map(s => s.name);
     const scorePlural = sportTerm.scoreEventPlural || 'Anotaciones';
 
-    // Gráfico 1: Top Anotadores (según deporte y liga activa)
+    const getScore = (m, side) => m.score?.[side] ?? m[side + 'Score'] ?? 0;
+
+    const finishedMatches = matches.filter(m => m.status === 'Finalizado' || m.status === 'finished');
+    const finishedByDate = [...finishedMatches]
+        .filter(m => m.date)
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+    const dateLabel = (m) => new Date(m.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+
+    // Gráfico 1: Top Anotadores (barras horizontales)
     const ctxPF = document.getElementById('chartPF')?.getContext('2d');
     if (ctxPF) {
         const scorersTop = topScorers.slice(0, 8);
@@ -423,21 +449,20 @@ function initCharts(standings, matches, sportTerm, topScorers) {
                 }]
             },
             options: {
+                indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
             }
         });
     }
 
     // Gráfico 2: Torta de Resultados
-    const finishedMatches = matches.filter(m => m.status === 'Finalizado');
     let winsHome = 0, winsAway = 0, draws = 0;
-    
     finishedMatches.forEach(m => {
-        const homeScore = m.score?.home || 0;
-        const awayScore = m.score?.away || 0;
+        const homeScore = getScore(m, 'home');
+        const awayScore = getScore(m, 'away');
         if (homeScore > awayScore) winsHome++;
         else if (awayScore > homeScore) winsAway++;
         else draws++;
@@ -458,23 +483,108 @@ function initCharts(standings, matches, sportTerm, topScorers) {
         });
     }
 
-    
+    // Gráfico 3: Evolución de Anotaciones por Fecha (timeline acumulativo)
     const ctxTimeline = document.getElementById('chartTimeline')?.getContext('2d');
-    if (ctxTimeline) {
+    if (ctxTimeline && finishedByDate.length) {
+        let cum = 0;
+        const timelineData = finishedByDate.map(m => {
+            cum += getScore(m, 'home') + getScore(m, 'away');
+            return cum;
+        });
         new Chart(ctxTimeline, {
             type: 'line',
             data: {
-                labels: labels,
+                labels: finishedByDate.map(dateLabel),
                 datasets: [{
-                    label: 'Puntos',
-                    data: standings.map(s => s.stats?.points || 0),
+                    label: `${scorePlural} acumulados`,
+                    data: timelineData,
                     borderColor: accentHex,
                     backgroundColor: `rgba(${accentRgb}, 0.2)`,
                     tension: 0.3,
                     fill: true
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+            }
         });
+    }
+
+    // Gráfico 4: Evolución de Puntos Acumulados por Equipo (multi-serie)
+    const ctxTeamEvolution = document.getElementById('chartTeamEvolution')?.getContext('2d');
+    if (ctxTeamEvolution && finishedByDate.length) {
+        const SERIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#a855f7'];
+        const topTeams = standings.slice(0, 5);
+        const datasets = topTeams.map((t, i) => {
+            const tid = Number(t.id);
+            let pts = 0;
+            const data = finishedByDate.map(m => {
+                const isHome = Number(m.homeTeamId) === tid;
+                const isAway = Number(m.awayTeamId) === tid;
+                if (isHome || isAway) {
+                    const mine = isHome ? getScore(m, 'home') : getScore(m, 'away');
+                    const other = isHome ? getScore(m, 'away') : getScore(m, 'home');
+                    if (mine > other) pts += 3;
+                    else if (mine === other) pts += 1;
+                }
+                return pts;
+            });
+            return {
+                label: t.name,
+                data,
+                borderColor: SERIE_COLORS[i % SERIE_COLORS.length],
+                backgroundColor: 'transparent',
+                tension: 0.3,
+                pointRadius: 3
+            };
+        });
+        new Chart(ctxTeamEvolution, {
+            type: 'line',
+            data: { labels: finishedByDate.map(dateLabel), datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+            }
+        });
+    }
+
+    // Gráfico 5: Anotaciones por Ronda
+    const ctxRoundBars = document.getElementById('chartRoundBars')?.getContext('2d');
+    if (ctxRoundBars) {
+        const roundMap = new Map();
+        [...matches]
+            .sort((a, b) => String(a.round || '').localeCompare(String(b.round || ''), 'es', { numeric: true }))
+            .forEach(m => {
+                const r = (m.round !== undefined && m.round !== null && m.round !== '') ? String(m.round) : 'Sin ronda';
+                roundMap.set(r, (roundMap.get(r) || 0) + getScore(m, 'home') + getScore(m, 'away'));
+            });
+        const roundLabels = [...roundMap.keys()];
+        const roundData = [...roundMap.values()];
+        if (roundLabels.length) {
+            new Chart(ctxRoundBars, {
+                type: 'bar',
+                data: {
+                    labels: roundLabels,
+                    datasets: [{
+                        label: scorePlural,
+                        data: roundData,
+                        backgroundColor: `rgba(${accentRgb}, 0.55)`,
+                        borderColor: accentHex,
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                }
+            });
+        }
     }
 }

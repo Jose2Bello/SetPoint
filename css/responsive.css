@@ -24,6 +24,15 @@
         display: flex;
         justify-content: center;
     }
+    .nav-brand .logo-grid-container {
+        height: 42px;
+        max-width: 190px;
+        padding: 0 0.7rem;
+    }
+    .nav-brand .brand-logo-img {
+        height: 32px;
+        transform: none;
+    }
     .nav-links {
         width: 100%;
         flex-wrap: wrap;
@@ -128,8 +137,12 @@
 
 /* ===== Móvil pequeño ≤ 420px ===== */
 @media (max-width: 420px) {
-    .logo-grid-container {
-        height: 48px;
-        max-width: 150px;
+    .nav-brand .logo-grid-container {
+        height: 38px;
+        max-width: 160px;
+        padding: 0 0.55rem;
+    }
+    .nav-brand .brand-logo-img {
+        height: 28px;
     }
 }

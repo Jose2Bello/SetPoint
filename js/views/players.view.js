@@ -5,6 +5,7 @@ import { getActiveLeague } from '../db/leagues.db.js';
 import { initDB } from '../db/connection.js';
 import { getSportConfig } from '../sports-terms.js';
 import { toast } from '../components/toast.js';
+import { debounce } from '../utils/debounce.js';
 
 const DEFAULT_AVATAR = 'assets/no-image.webp';
 const UPLOAD_ICON = 'assets/upload-icon.png';
@@ -107,7 +108,8 @@ export async function renderPlayersView(container) {
         renderPlayerCards(resultsGrid, filtered, teamMap, sportConfig);
     }
 
-    searchInput.addEventListener('input', applyFilters);
+    const debouncedSearch = debounce(applyFilters, 350);
+    searchInput.addEventListener('input', debouncedSearch);
     teamSelect.addEventListener('change', applyFilters);
     positionSelect.addEventListener('change', applyFilters);
 

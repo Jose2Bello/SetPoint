@@ -38,6 +38,16 @@ function render(container, activeLeague, teams, matches) {
     const teamMap = new Map(teams.map(t => [Number(t.id), t]));
     const isLeagueMode = activeLeague.mode === 'liga' || activeLeague.modality === 'league';
 
+    const roundSet = new Set();
+    matches.forEach(m => {
+        if (m.round !== undefined && m.round !== null && m.round !== '') roundSet.add(String(m.round));
+    });
+    const rounds = [...roundSet].sort((a, b) => {
+        const na = Number(a), nb = Number(b);
+        return (isNaN(na) || isNaN(nb)) ? a.localeCompare(b, 'es') : na - nb;
+    });
+    const roundLabel = (r) => isLeagueMode ? `Jornada ${r}` : r;
+
     const statusColors = {
         'Finalizado': { bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.4)', text: '#10b981' },
         'finished':   { bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.4)', text: '#10b981' },
@@ -109,6 +119,13 @@ function render(container, activeLeague, teams, matches) {
                     <option value="">Todos los equipos</option>
                     ${teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
                 </select>
+                <input type="date" id="filterDateFrom" class="form-control" style="min-width: 150px; flex: 1;" title="Fecha desde" />
+                <input type="date" id="filterDateTo" class="form-control" style="min-width: 150px; flex: 1;" title="Fecha hasta" />
+                ${rounds.length ? `
+                <select id="filterRound" class="form-control" style="min-width: 160px; flex: 1;">
+                    <option value="">Todas las rondas</option>
+                    ${rounds.map(r => `<option value="${r}">${roundLabel(r)}</option>`).join('')}
+                </select>` : ''}
                 <button id="btnClearFilters" class="btn btn-secondary btn-sm">Limpiar</button>
             </div>
 
@@ -320,23 +337,52 @@ function render(container, activeLeague, teams, matches) {
 
     const statusFilter = container.querySelector('#filterStatus');
     const teamFilter = container.querySelector('#filterTeam');
+    const dateFromFilter = container.querySelector('#filterDateFrom');
+    const dateToFilter = container.querySelector('#filterDateTo');
+    const roundFilter = container.querySelector('#filterRound');
+
+    const dayInRange = (dateISO, fromVal, toVal) => {
+        if (!dateISO) return !fromVal && !toVal;
+        const dayStart = new Date(dateISO);
+        dayStart.setHours(0, 0, 0, 0);
+        if (fromVal) {
+            const fromStart = new Date(fromVal + 'T00:00:00');
+            if (dayStart < fromStart) return false;
+        }
+        if (toVal) {
+            const toEnd = new Date(toVal + 'T23:59:59.999');
+            if (dayStart > toEnd) return false;
+        }
+        return true;
+    };
 
     function applyFilters() {
         const sVal = statusFilter.value;
         const tVal = teamFilter.value;
+        const fVal = dateFromFilter ? dateFromFilter.value : '';
+        const t2Val = dateToFilter ? dateToFilter.value : '';
+        const rVal = roundFilter ? roundFilter.value : '';
         const filtered = matches.filter(m => {
             const sMatch = sVal ? (m.status === sVal || (sVal === 'Programado' && m.status === 'scheduled') || (sVal === 'Finalizado' && m.status === 'finished')) : true;
             const tMatch = tVal ? (String(m.homeTeamId) === tVal || String(m.awayTeamId) === tVal) : true;
-            return sMatch && tMatch;
+            const dMatch = dayInRange(m.date, fVal, t2Val);
+            const rMatch = rVal ? String(m.round) === rVal : true;
+            return sMatch && tMatch && dMatch && rMatch;
         });
         renderList(filtered);
     }
 
     statusFilter.addEventListener('change', applyFilters);
     teamFilter.addEventListener('change', applyFilters);
+    if (dateFromFilter) dateFromFilter.addEventListener('change', applyFilters);
+    if (dateToFilter) dateToFilter.addEventListener('change', applyFilters);
+    if (roundFilter) roundFilter.addEventListener('change', applyFilters);
     container.querySelector('#btnClearFilters').addEventListener('click', () => {
         statusFilter.value = '';
         teamFilter.value = '';
+        if (dateFromFilter) dateFromFilter.value = '';
+        if (dateToFilter) dateToFilter.value = '';
+        if (roundFilter) roundFilter.value = '';
         renderList(matches);
     });
     container.querySelector('#btnRefreshMatches').addEventListener('click', () => renderMatches(container));

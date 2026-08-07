@@ -4,6 +4,15 @@ Aplicación web de **una sola página (SPA)** para gestionar ligas amateur de m�
 
 ---
 
+## Integrantes y división de trabajo
+
+| Integrante | Responsabilidades |
+|---|---|
+| **Jose Bello Lopez** | Desarrolló los **componentes principales** (NavBar, Footer, MatchCard, PlayerCard, ConfirmDialog, Toast, LoadingState), la **capa de IndexedDB** (`js/db/connection.js`, `js/db/*.db.js` y `js/db/transactions.js` con las operaciones de integridad) y las vistas **`#dashboard`** y **`#leagues`** (creación/edición de ligas, liga activa, fixture, bracket, exportar/importar JSON). |
+| **Santiago Salas Lambarca** | Desarrolló **todo lo demás**: vistas `#teams`, `#team/:id`, `#players`, `#player/:id`, `#matches`, `#match/:id`, `#stats` y la landing; servicios de lógica de negocio (`js/services/`), mapa de terminología multi-deporte (`js/sports-terms.js`), router de hash, estilos globales, gráficos de Chart.js, filtros y la PWA (`sw.js` + `manifest.webmanifest`). |
+
+---
+
 ## 1. Cómo ejecutar
 
 1. Abre el archivo `index.html` en el navegador (Chrome/Edge/Firefox). No se necesita servidor ni instalación.
