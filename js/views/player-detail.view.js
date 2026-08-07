@@ -1,9 +1,14 @@
 
 import { playersDb } from '../db/players.db.js';
 import { teamsDb } from '../db/teams.db.js'; 
+import { getTeamsByLeague } from '../db/teams.db.js';
 import { getEventsByPlayer } from '../db/events.db.js'; 
 import { getActiveLeague } from '../db/leagues.db.js';
 import { SPORTS } from '../sports-terms.js';
+import { openPlayerModal } from './players.view.js';
+import { confirmAction } from '../components/confirm-dialog.js';
+import { playerService } from '../services/player.service.js';
+import { toast } from '../components/toast.js';
 
 export async function renderPlayerDetail(container, params) {
     const playerId = Number(params.id);
@@ -29,6 +34,7 @@ export async function renderPlayerDetail(container, params) {
     const team = await teamsDb.getById(player.teamId); 
     const activeLeague = await getActiveLeague();
     const sportConfig = SPORTS[activeLeague?.sport] || SPORTS.futbol;
+    const teams = await getTeamsByLeague(activeLeague?.id);
     const events = await getEventsByPlayer(playerId);
 
     container.textContent = '';
@@ -95,7 +101,41 @@ export async function renderPlayerDetail(container, params) {
         profileInfo.appendChild(pTeam);
     }
     profileHeader.appendChild(profileInfo);
+
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display: flex; gap: 0.6rem; flex-wrap: wrap; margin-left: auto;';
+    const btnEdit = document.createElement('button');
+    btnEdit.className = 'btn btn-secondary';
+    btnEdit.textContent = '✏️ Editar';
+    const btnDelete = document.createElement('button');
+    btnDelete.className = 'btn btn-secondary';
+    btnDelete.textContent = '🗑️ Eliminar';
+    btnDelete.style.color = '#ef4444';
+    btnDelete.style.borderColor = 'rgba(239,68,68,0.4)';
+    actions.appendChild(btnEdit);
+    actions.appendChild(btnDelete);
+    profileHeader.appendChild(actions);
+
     container.appendChild(profileHeader);
+
+    btnEdit.addEventListener('click', () => {
+        openPlayerModal(teams, activeLeague.id, sportConfig, {
+            player: { ...player, teamName: team?.name || '' },
+            onSuccess: () => renderPlayerDetail(container, params)
+        });
+    });
+
+    btnDelete.addEventListener('click', async () => {
+        const confirmed = await confirmAction('Eliminar Jugador', `¿Seguro que querés eliminar a "${player.name}"? Esta acción no se puede deshacer.`);
+        if (!confirmed) return;
+        try {
+            await playerService.deletePlayer(player.id);
+            toast.success('Jugador eliminado con éxito');
+            window.location.hash = 'players';
+        } catch (err) {
+            toast.error(err.message || 'No se pudo eliminar el jugador.');
+        }
+    });
 
     const statsGrid = document.createElement('div');
     statsGrid.className = 'stats-overview-grid';

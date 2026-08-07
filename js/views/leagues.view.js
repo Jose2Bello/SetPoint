@@ -603,7 +603,7 @@ async function showEnrollTeamModal(leagueId, leagueSport, enrolledIds, onSuccess
 /**
  * Pestaña del Bracket de Eliminación
  */
-function renderBracketTab(container, league, teams, matches, refreshTab) {
+export function renderBracketTab(container, league, teams, matches, refreshTab) {
     const teamMap = new Map(teams.map(t => [Number(t.id), t]));
 
     if (matches.length === 0) {

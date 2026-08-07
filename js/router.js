@@ -1,6 +1,6 @@
 /* js/router.js */
 import { renderDashboard } from './views/dashboard.view.js';
-import { renderLeagues } from './views/leagues.view.js';
+import { renderLeagues, renderLeagueDetail } from './views/leagues.view.js';
 import { renderTeams } from './views/teams.view.js';
 import { renderTeamDetail } from './views/team-detail.view.js';
 import { renderMatches } from './views/matches.view.js';
@@ -8,12 +8,13 @@ import { renderMatchDetail } from './views/match-detail.view.js';
 import { renderPlayersView } from './views/players.view.js'; 
 import { renderPlayerDetail } from './views/player-detail.view.js';
 import { renderStats } from './views/stats-view.js';
+import { renderBracketView } from './views/bracket.view.js';
 import { renderLandingView } from './views/landing.view.js';
 
 const routes = {
     'landing': renderLandingView,
     'dashboard': renderDashboard, 
-    'leagues': renderLeagues,
+    'leagues': (container, params) => params?.id ? renderLeagueDetail(container, params) : renderLeagues(container),
     'teams': renderTeams, 
     'team': renderTeamDetail,
     'matches': renderMatches,
@@ -21,7 +22,8 @@ const routes = {
     'match-detail': renderMatchDetail,
     'players': renderPlayersView, 
     'player': renderPlayerDetail,   
-    'stats': renderStats
+    'stats': renderStats,
+    'bracket': renderBracketView
 };
 
 class Router {

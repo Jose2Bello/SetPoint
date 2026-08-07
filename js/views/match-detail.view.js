@@ -49,7 +49,7 @@ export async function renderMatchDetail(container, params) {
     const backLink = document.createElement('a');
     const isBracketLeague = activeLeague && (activeLeague.mode === 'eliminacion' || activeLeague.mode === 'doble-eliminacion');
     if (isBracketLeague) {
-        backLink.href = `#league/${match.leagueId ?? activeLeague.id}`;
+        backLink.href = `#bracket/${match.leagueId ?? activeLeague.id}`;
         backLink.className = 'btn btn-secondary';
         backLink.textContent = '← Volver al Bracket';
     } else {

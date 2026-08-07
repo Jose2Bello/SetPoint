@@ -1,5 +1,5 @@
 /* js/views/players.view.js */
-import { getAllPlayers, createPlayer } from '../db/players.db.js';
+import { getAllPlayers, createPlayer, updatePlayer } from '../db/players.db.js';
 import { getTeamsByLeague } from '../db/teams.db.js';
 import { getActiveLeague } from '../db/leagues.db.js';
 import { initDB } from '../db/connection.js';
@@ -247,7 +247,7 @@ function renderPlayerCards(container, players, teamMap, sportConfig) {
     }
 
     container.innerHTML = players.map(p => `
-        <a href="#player/${p.id}" class="glass-card clickable-card" style="padding: 1rem; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--color-border-strong); display: flex; flex-direction: column; justify-content: space-between; text-decoration: none; color: inherit; cursor: pointer;">
+        <a href="#player/${p.id}" class="glass-card player-card-item" style="text-decoration: none; color: inherit; padding: 1rem; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--color-border-strong); display: flex; flex-direction: column; justify-content: space-between;">
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
                     ${getPlayerAvatarHTML(p, '45px')}
@@ -267,7 +267,8 @@ function renderPlayerCards(container, players, teamMap, sportConfig) {
 }
 
 export function openPlayerModal(teams, activeLeagueId, sportConfig, options = {}) {
-    const { teamId = null, onSuccess = null } = options;
+    const { teamId = null, onSuccess = null, player = null } = options;
+    const isEdit = !!player;
 
     const existing = document.getElementById('player-modal-overlay');
     if (existing) existing.remove();
@@ -285,19 +286,22 @@ export function openPlayerModal(teams, activeLeagueId, sportConfig, options = {}
     const positions = sportConfig.defaultPositions || ['Jugador'];
     const sportIcon = sportConfig.icon || '👤';
     const preselected = teamId !== null && teamId !== undefined ? Number(teamId) : null;
+    const currentTeamId = player ? Number(player.teamId) : null;
+    const hasCurrentTeamInList = currentTeamId !== null && teams.some(t => Number(t.id) === currentTeamId);
+    const playerTeamName = player?.teamName || '';
 
     modalOverlay.innerHTML = `
         <div class="glass-panel" style="width: 100%; max-width: 600px; padding: 2.25rem; border-radius: 16px; background: var(--color-bg-modal); box-shadow: 0 24px 60px rgba(0,0,0,0.6); border: 1px solid rgba(var(--color-accent-rgb), 0.25); max-height: 92vh; overflow-y: auto; box-sizing: border-box;">
             <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem;">
                 <span style="font-size: 1.7rem; line-height: 1;">${sportIcon}</span>
-                <h2 style="margin: 0; font-size: 1.5rem; font-weight: 800; color: var(--color-text-primary);">Nuevo Jugador</h2>
+                <h2 style="margin: 0; font-size: 1.5rem; font-weight: 800; color: var(--color-text-primary);">${isEdit ? 'Editar Jugador' : 'Nuevo Jugador'}</h2>
             </div>
-            <p style="margin: 0 0 1.75rem 0; font-size: 0.9rem; color: var(--color-text-muted);">Completa los datos del atleta para registrarlo en la liga activa.</p>
+            <p style="margin: 0 0 1.75rem 0; font-size: 0.9rem; color: var(--color-text-muted);">${isEdit ? 'Modificá los datos del atleta.' : 'Completa los datos del atleta para registrarlo en la liga activa.'}</p>
             
             <form id="form-new-player">
                 <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 1.75rem;">
                     <div style="position: relative; width: 120px; height: 120px; border-radius: 50%; border: 2px dashed #64748b; overflow: hidden; background: var(--color-bg-solid); display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px rgba(0,0,0,0.35); transition: all 0.2s;">
-                        <img id="photo-preview" src="${DEFAULT_AVATAR}" onerror="this.src='${DEFAULT_AVATAR}'" style="width: 120px; height: 120px; max-width: 120px; max-height: 120px; object-fit: cover; display: block;">
+                        <img id="photo-preview" src="${player?.photo || DEFAULT_AVATAR}" onerror="this.src='${DEFAULT_AVATAR}'" style="width: 120px; height: 120px; max-width: 120px; max-height: 120px; object-fit: cover; display: block;">
                         <label for="player-photo-input" style="position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; cursor: pointer;">
                             <img src="${UPLOAD_ICON}" alt="Subir foto" style="width: 32px; height: 32px;">
                         </label>
@@ -308,27 +312,30 @@ export function openPlayerModal(teams, activeLeagueId, sportConfig, options = {}
 
                 <div style="margin-bottom: 1.25rem;">
                     <label style="display: block; font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.35rem;">Nombre Completo *</label>
-                    <input type="text" id="player-name" class="form-control" required placeholder="Ej. Lionel Messi" maxlength="60" style="width: 100%; box-sizing: border-box; padding: 0.75rem; font-size: 1rem;" />
+                    <input type="text" id="player-name" class="form-control" required placeholder="Ej. Lionel Messi" maxlength="60" value="${player ? (player.name || '').replace(/"/g, '&quot;') : ''}" style="width: 100%; box-sizing: border-box; padding: 0.75rem; font-size: 1rem;" />
                 </div>
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
                     <div>
                         <label style="display: block; font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.35rem;">Dorsal (Número)</label>
-                        <input type="number" id="player-number" class="form-control" placeholder="Ej. 10" style="width: 100%; box-sizing: border-box; padding: 0.75rem;" />
+                        <input type="number" id="player-number" class="form-control" placeholder="Ej. 10" value="${player ? (player.number ?? '') : ''}" style="width: 100%; box-sizing: border-box; padding: 0.75rem;" />
                     </div>
                     <div>
                         <label style="display: block; font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.35rem;">Posición</label>
                         <select id="player-position" class="form-control" style="width: 100%; box-sizing: border-box; padding: 0.75rem;">
-                            ${positions.map(pos => `<option value="${pos}">${pos}</option>`).join('')}
+                            ${positions.map(pos => `<option value="${pos}" ${player && player.position === pos ? 'selected' : ''}>${pos}</option>`).join('')}
                         </select>
                     </div>
                 </div>
 
                 <div style="margin-bottom: 1.75rem;">
                     <label style="display: block; font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.35rem;">Equipo *</label>
-                    <select id="player-team" class="form-control" required style="width: 100%; box-sizing: border-box; padding: 0.75rem;">
-                        <option value="" disabled ${preselected ? '' : 'selected'}>Selecciona un equipo...</option>
-                        ${teams.map(t => `<option value="${t.id}" ${Number(t.id) === preselected ? 'selected' : ''}>${t.name}</option>`).join('')}
+                    <select id="player-team" class="form-control" ${isEdit && currentTeamId === null ? '' : 'required'} style="width: 100%; box-sizing: border-box; padding: 0.75rem;">
+                        ${isEdit && currentTeamId === null
+                            ? `<option value="none" selected>Sin equipo</option>`
+                            : `<option value="" disabled ${!preselected && !player ? 'selected' : ''}>Selecciona un equipo...</option>`}
+                        ${teams.map(t => `<option value="${t.id}" ${Number(t.id) === preselected || (player && Number(player.teamId) === Number(t.id)) ? 'selected' : ''}>${t.name}</option>`).join('')}
+                        ${isEdit && currentTeamId !== null && !hasCurrentTeamInList ? `<option value="${currentTeamId}" selected>${playerTeamName || `Equipo #${currentTeamId}`}</option>` : ''}
                     </select>
                 </div>
 
@@ -342,7 +349,7 @@ export function openPlayerModal(teams, activeLeagueId, sportConfig, options = {}
 
     const fileInput = document.getElementById('player-photo-input');
     const photoPreview = document.getElementById('photo-preview');
-    let base64Image = null;
+    let base64Image = player?.photo || null;
 
     fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
@@ -373,18 +380,29 @@ export function openPlayerModal(teams, activeLeagueId, sportConfig, options = {}
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const newPlayer = {
+        const teamValue = document.getElementById('player-team').value;
+        let finalTeamId = teamValue === 'none' || teamValue === '' ? null : Number(teamValue);
+        if (isEdit && finalTeamId === null && player.teamId !== null && player.teamId !== undefined) {
+            finalTeamId = Number(player.teamId);
+        }
+
+        const playerData = {
             name: document.getElementById('player-name').value.trim(),
             number: document.getElementById('player-number').value,
-            teamId: document.getElementById('player-team').value,
+            teamId: finalTeamId,
             leagueId: activeLeagueId,
             position: document.getElementById('player-position').value,
             photo: base64Image
         };
 
         try {
-            await createPlayer(newPlayer);
-            toast.success('Jugador registrado con éxito');
+            if (isEdit) {
+                await updatePlayer(player.id, playerData);
+                toast.success('Jugador actualizado con éxito');
+            } else {
+                await createPlayer(playerData);
+                toast.success('Jugador registrado con éxito');
+            }
             closeModal();
             if (typeof onSuccess === 'function') onSuccess();
         } catch (error) {

@@ -174,3 +174,67 @@ export function getFormationPositions(sportRaw, formationKey) {
     const sportFormations = FORMATIONS[sport] || FORMATIONS.futbol;
     return sportFormations[formationKey] || Object.values(sportFormations)[0];
 }
+
+/**
+ * Bands por etiqueta de posición por deporte.
+ * Cada banda define el eje vertical (x) del terreno donde acomodar a los jugadores
+ * según la etiqueta que tengan (Portero, Defensa, Delantero, etc).
+ */
+export const POSITION_LAYOUTS = {
+    futbol: [
+        { keys: ['portero', 'arquero', 'golero', 'por'], area: 'POR', x: 12 },
+        { keys: ['defensa', 'defensor', 'central', 'lateral', 'carrilero', 'def'], area: 'DEF', x: 27 },
+        { keys: ['centrocampista', 'mediocentro', 'mediocampista', 'medio', 'pivote', 'volante', 'med'], area: 'MED', x: 50 },
+        { keys: ['delantero', 'extremo', 'punta', 'winger', 'del'], area: 'DEL', x: 80 }
+    ],
+    basquet: [
+        { keys: ['base', 'point guard', 'pg'], area: 'BASE', x: 50 },
+        { keys: ['escolta', 'shooting guard', 'sg', 'esc', 'exterior'], area: 'ESC', x: 72 },
+        { keys: ['alero', 'small forward', 'sf'], area: 'ALE', x: 28 },
+        { keys: ['ala-pivot', 'power forward', 'pf', 'ap'], area: 'AP', x: 30 },
+        { keys: ['pivot', 'center', 'centro', 'c'], area: 'PIV', x: 70 }
+    ],
+    voleibol: [
+        { keys: ['colocador', 'setter', 'col'], area: 'COL', x: 70 },
+        { keys: ['rematador', 'atacante', 'punta', 'delantero', 'outside', 'rem'], area: 'REM', x: 55 },
+        { keys: ['central', 'middle', 'cen'], area: 'CEN', x: 45 },
+        { keys: ['opuesto', 'opposite', 'opu'], area: 'OPU', x: 68 },
+        { keys: ['libero', 'zaguero', 'lib'], area: 'LIB', x: 50 }
+    ]
+};
+
+/**
+ * Normaliza un texto a minúsculas y sin acentos para comparaciones.
+ */
+function normalizeLabel(text) {
+    return String(text || '')
+        .toLowerCase()
+        .replace(/á/g, 'a')
+        .replace(/é/g, 'e')
+        .replace(/í/g, 'i')
+        .replace(/ó/g, 'o')
+        .replace(/ú/g, 'u')
+        .replace(/ü/g, 'u')
+        .replace(/ñ/g, 'n');
+}
+
+/**
+ * Devuelve la banda de posición (slot) que corresponde a una etiqueta
+ * (p. ej. "Delantero", "DEL", "Pívot", "Base") o null si no coincide con ninguna.
+ */
+export function getPositionLayoutSlot(sportRaw, label) {
+    const sport = normalizeSport(sportRaw);
+    const layouts = POSITION_LAYOUTS[sport];
+    if (!layouts) return null;
+    const normalized = normalizeLabel(label);
+    if (!normalized) return null;
+    for (const slot of layouts) {
+        for (const key of slot.keys) {
+            // Las abreviaturas (p. ej. "POR", "DEF", "PIV") deben coincidir exactamente;
+            // las palabras completas pueden coincidir por inclusión.
+            if (normalized === key) return slot;
+            if (key.length >= 5 && normalized.includes(key)) return slot;
+        }
+    }
+    return null;
+}

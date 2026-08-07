@@ -190,14 +190,16 @@ export function finalizeMatch(matchId, eventsList, manualWinnerId = null) {
             matchesStore.put(match);
             
             eventsList.forEach(ev => {
-                eventsStore.add({
-                    matchId: targetMatchId,
-                    playerId: Number(ev.playerId),
-                    teamId: Number(ev.teamId),
-                    type: ev.type,
-                    minute: ev.minute ? Number(ev.minute) : null,
-                    createdAt: new Date().toISOString()
-                });
+                if (!ev.id) {
+                    eventsStore.add({
+                        matchId: targetMatchId,
+                        playerId: Number(ev.playerId),
+                        teamId: Number(ev.teamId),
+                        type: ev.type,
+                        minute: ev.minute ? Number(ev.minute) : null,
+                        createdAt: new Date().toISOString()
+                    });
+                }
             });
             
             if (league.mode === 'liga') {

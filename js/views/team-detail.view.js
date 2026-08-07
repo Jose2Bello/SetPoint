@@ -12,6 +12,7 @@ import {
     getFieldImage,
     getDefaultFormationKey,
     getFormationPositions,
+    getPositionLayoutSlot,
     FORMATIONS,
     SPORT_STARTERS_LIMIT
 } from '../utils/tactical.js';
@@ -427,8 +428,8 @@ function renderTacticalBoard(container, team, rawPlayers, activeLeague) {
         };
     });
 
-    // Asegura que los titulares tengan coordenadas
-    applyFormationPositions(localPlayers, sportKey, currentFormationKey, false);
+    // Asegura que los titulares tengan coordenadas según su etiqueta de posición
+    applyPositionLayout(localPlayers, sportKey, currentFormationKey, false);
 
     const sportIcons = { futbol: '⚽ Fútbol', basquet: '🏀 Básquetbol', voleibol: '🏐 Vóleibol' };
 
@@ -466,6 +467,17 @@ function renderTacticalBoard(container, team, rawPlayers, activeLeague) {
 
     const rightControls = document.createElement('div');
     rightControls.className = 'tactical-controls-group';
+
+    const reorderBtn = document.createElement('button');
+    reorderBtn.className = 'btn btn-secondary text-sm';
+    reorderBtn.innerHTML = '🔀 Ordenar por Posición';
+    reorderBtn.title = 'Acomoda a los titulares en el campo según su etiqueta (Portero, Defensa, Delantero, etc.)';
+    reorderBtn.addEventListener('click', () => {
+        applyPositionLayout(localPlayers, sportKey, currentFormationKey, true);
+        updateDisplay();
+        toast.info('Jugadores ordenados según su posición.');
+    });
+    rightControls.appendChild(reorderBtn);
 
     const saveBtn = document.createElement('button');
     saveBtn.className = 'btn btn-primary text-sm';
@@ -671,7 +683,7 @@ function renderTacticalBoard(container, team, rawPlayers, activeLeague) {
     // ==========================================
     selectFormation.addEventListener('change', (e) => {
         currentFormationKey = e.target.value;
-        applyFormationPositions(localPlayers, sportKey, currentFormationKey, true);
+        applyPositionLayout(localPlayers, sportKey, currentFormationKey, true);
         updateDisplay();
         toast.info(`Formación cambiada a ${currentFormationKey}`);
     });
@@ -686,7 +698,7 @@ function renderTacticalBoard(container, team, rawPlayers, activeLeague) {
             return;
         }
         player.isStarter = true;
-        applyFormationPositions(localPlayers, sportKey, currentFormationKey, false);
+        applyPositionLayout(localPlayers, sportKey, currentFormationKey, false);
         updateDisplay();
         toast.success(`${player.name} ahora es Titular.`);
     }
@@ -813,26 +825,78 @@ function renderTacticalBoard(container, team, rawPlayers, activeLeague) {
 }
 
 /**
- * Ajusta o calcula las posiciones en el terreno según la formación seleccionada.
+ * Ajusta las posiciones en el terreno según la formación seleccionada,
+ * asignando a cada titular el casillero que coincide con la posición
+ * registrada al crear el jugador (Portero -> casillero del portero,
+ * Delantero -> casillero de ataque, etc.). Los jugadores sin posición
+ * conocida ocupan los casilleros libres restantes de la alineación.
  */
-function applyFormationPositions(playersList, sportKey, formationKey, forceResetAll = false) {
+function applyPositionLayout(playersList, sportKey, formationKey, forceResetAll = false) {
     const formationSlots = getFormationPositions(sportKey, formationKey);
     const starters = playersList.filter(p => p.isStarter);
 
-    starters.forEach((player, idx) => {
-        if (idx < formationSlots.length) {
-            const slot = formationSlots[idx];
-            if (forceResetAll || player.pitchX === null || player.pitchY === null) {
-                player.pitchX = slot.x;
-                player.pitchY = slot.y;
-                player.pitchPosition = slot.pos;
-            }
+    const toPlace = starters.filter(p => forceResetAll || p.pitchX === null || p.pitchY === null);
+    if (toPlace.length === 0) return;
+
+    const classifySlot = (slot) =>
+        (getPositionLayoutSlot(sportKey, slot.title) || getPositionLayoutSlot(sportKey, slot.pos))?.area || null;
+
+    const classifyPlayer = (p) => {
+        const label = (p.position || '').trim() || (p.pitchPosition || '').trim() || '';
+        return getPositionLayoutSlot(sportKey, label)?.area || null;
+    };
+
+    // Casilleros de la formación con su banda y estado de uso
+    const slotPool = formationSlots.map(slot => ({ ...slot, band: classifySlot(slot), used: false }));
+    const slotsByBand = new Map();
+    slotPool.forEach(slot => {
+        if (!slot.band) return;
+        if (!slotsByBand.has(slot.band)) slotsByBand.set(slot.band, []);
+        slotsByBand.get(slot.band).push(slot);
+    });
+
+    // Jugadores por banda usando la posición con la que fueron creados
+    const playersByBand = new Map();
+    const leftovers = [];
+    toPlace.forEach(p => {
+        const band = classifyPlayer(p);
+        if (band) {
+            if (!playersByBand.has(band)) playersByBand.set(band, []);
+            playersByBand.get(band).push(p);
         } else {
-            if (forceResetAll || player.pitchX === null || player.pitchY === null) {
-                player.pitchX = 50;
-                player.pitchY = 50;
-                player.pitchPosition = 'TIT';
+            leftovers.push(p);
+        }
+    });
+
+    // 1) Asignar cada jugador al casillero de su banda (en orden)
+    playersByBand.forEach((players, band) => {
+        const slots = slotsByBand.get(band) || [];
+        players.forEach((p, i) => {
+            const slot = slots[i];
+            if (slot) {
+                slot.used = true;
+                p.pitchX = slot.x;
+                p.pitchY = slot.y;
+                p.pitchPosition = slot.pos;
+            } else {
+                leftovers.push(p);
             }
+        });
+    });
+
+    // 2) Excedentes y jugadores sin posición → casilleros libres restantes
+    const unusedSlots = slotPool.filter(s => !s.used);
+    leftovers.forEach((p, i) => {
+        const slot = unusedSlots[i];
+        if (slot) {
+            slot.used = true;
+            p.pitchX = slot.x;
+            p.pitchY = slot.y;
+            p.pitchPosition = slot.pos;
+        } else {
+            p.pitchX = 50;
+            p.pitchY = 50;
+            p.pitchPosition = 'TIT';
         }
     });
 }

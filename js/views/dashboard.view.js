@@ -123,7 +123,7 @@ export async function renderDashboard(container) {
                     <div class="dashboard-card-title">
                         <span>📊 ${isBracketMode ? 'Tabla de Posiciones del Torneo' : 'Resumen del Torneo'} (${modeLabel})</span>
                         ${isBracketMode
-                            ? `<a href="#leagues" class="text-sm text-primary">Ver Bracket &rarr;</a>`
+                            ? `<a href="#bracket/${league.id}" class="text-sm text-primary">Ver Bracket &rarr;</a>`
                             : `<a href="#stats" class="text-sm text-primary">Tabla Completa &rarr;</a>`}
                     </div>
                     ${isBracketMode ? renderBracketStandings(bracketStandings) : renderMiniStandings(standings, sportTerm)}

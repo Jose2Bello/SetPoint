@@ -13,7 +13,19 @@ export function getEventsByMatch(matchId) {
         const index = store.index('matchId');
         const request = index.getAll(Number(matchId));
         
-        request.onsuccess = () => resolve(request.result);
+        request.onsuccess = () => {
+            const raw = request.result || [];
+            const seen = new Set();
+            const unique = [];
+            for (const ev of raw) {
+                const key = `${ev.matchId}_${ev.playerId}_${ev.teamId}_${ev.type}_${ev.minute ?? 'null'}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    unique.push(ev);
+                }
+            }
+            resolve(unique);
+        };
         request.onerror = () => reject(request.error);
     });
 }
@@ -31,7 +43,19 @@ export function getEventsByPlayer(playerId) {
         const index = store.index('playerId');
         const request = index.getAll(Number(playerId));
         
-        request.onsuccess = () => resolve(request.result);
+        request.onsuccess = () => {
+            const raw = request.result || [];
+            const seen = new Set();
+            const unique = [];
+            for (const ev of raw) {
+                const key = `${ev.matchId}_${ev.playerId}_${ev.teamId}_${ev.type}_${ev.minute ?? 'null'}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    unique.push(ev);
+                }
+            }
+            resolve(unique);
+        };
         request.onerror = () => reject(request.error);
     });
 }
@@ -63,7 +87,7 @@ export function createEvent(eventData) {
 }
 
 /**
- * Elimina un evento de partido.
+ * Elimina un evento de partido y sus duplicados si existen.
  * @param {number} id 
  * @returns {Promise<void>}
  */
@@ -72,10 +96,32 @@ export function deleteEvent(id) {
         const db = getDB();
         const tx = db.transaction('events', 'readwrite');
         const store = tx.objectStore('events');
-        const request = store.delete(Number(id));
+        const getReq = store.get(Number(id));
         
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
+        getReq.onsuccess = () => {
+            const targetEv = getReq.result;
+            if (!targetEv) {
+                resolve();
+                return;
+            }
+            
+            const index = store.index('matchId');
+            const matchEventsReq = index.getAll(targetEv.matchId);
+            matchEventsReq.onsuccess = () => {
+                const allMatchEvents = matchEventsReq.result || [];
+                const targetKey = `${targetEv.matchId}_${targetEv.playerId}_${targetEv.teamId}_${targetEv.type}_${targetEv.minute ?? 'null'}`;
+                
+                allMatchEvents.forEach(ev => {
+                    const key = `${ev.matchId}_${ev.playerId}_${ev.teamId}_${ev.type}_${ev.minute ?? 'null'}`;
+                    if (key === targetKey) {
+                        store.delete(ev.id);
+                    }
+                });
+            };
+        };
+        
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
     });
 }
 
